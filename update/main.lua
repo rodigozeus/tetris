@@ -152,14 +152,14 @@ end
 local function draw_check(x, y)
   col(C.done)
   love.graphics.setLineWidth(2.5)
-  love.graphics.setLineJoin("round")
+  love.graphics.setLineJoin("miter")
   love.graphics.line(x - 8, y, x - 2, y + 7, x + 9, y - 8)
 end
 
 local function draw_cross(x, y)
   col(C.error_c)
   love.graphics.setLineWidth(2.5)
-  love.graphics.setLineJoin("round")
+  love.graphics.setLineJoin("miter")
   love.graphics.line(x - 6, y - 6, x + 6, y + 6)
   love.graphics.line(x + 6, y - 6, x - 6, y + 6)
 end
