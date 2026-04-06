@@ -6,7 +6,7 @@ function love.load()
 end
 
 function love.draw()
-  love.graphics.printf("versão 1", 0, 200, 640, "center")
+  love.graphics.printf("versão 2", 0, 200, 640, "center")
 end
 
 function love.keypressed()
