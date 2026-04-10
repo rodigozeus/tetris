@@ -264,13 +264,29 @@ function love.draw()
   end
 end
 
+-- ── helper de direção ────────────────────────────────────────────────────────
+
+local function tryDir(d)
+  nextDir = d
+  if state == "dying" then
+    -- ignora reversão de 180°
+    if d.x == -dir.x and d.y == -dir.y then return end
+    local head = {x = snake[1].x + d.x, y = snake[1].y + d.y}
+    if not checkCollision(head) then
+      state = "playing"
+      dir   = d
+      timer = speed   -- força mover na próxima tick
+    end
+  end
+end
+
 -- ── input (gamepad) ───────────────────────────────────────────────────────────
 
 function love.gamepadpressed(_, button)
-  if button == "dpup"    then nextDir = {x = 0, y = -1}
-  elseif button == "dpdown"  then nextDir = {x = 0, y =  1}
-  elseif button == "dpleft"  then nextDir = {x = -1, y = 0}
-  elseif button == "dpright" then nextDir = {x =  1, y = 0}
+  if button == "dpup"    then tryDir({x = 0, y = -1})
+  elseif button == "dpdown"  then tryDir({x = 0, y =  1})
+  elseif button == "dpleft"  then tryDir({x = -1, y = 0})
+  elseif button == "dpright" then tryDir({x =  1, y = 0})
   elseif button == "start" then
     if state == "playing"  then state = "paused";  playSound(snd_pause)
     elseif state == "paused"   then state = "playing"; playSound(snd_pause)
@@ -286,10 +302,10 @@ end
 -- ── input (teclado – testes no PC) ───────────────────────────────────────────
 
 function love.keypressed(key)
-  if key == "up"    or key == "w" then nextDir = {x = 0, y = -1}
-  elseif key == "down"  or key == "s" then nextDir = {x = 0, y =  1}
-  elseif key == "left"  or key == "a" then nextDir = {x = -1, y = 0}
-  elseif key == "right" or key == "d" then nextDir = {x =  1, y = 0}
+  if key == "up"    or key == "w" then tryDir({x = 0, y = -1})
+  elseif key == "down"  or key == "s" then tryDir({x = 0, y =  1})
+  elseif key == "left"  or key == "a" then tryDir({x = -1, y = 0})
+  elseif key == "right" or key == "d" then tryDir({x =  1, y = 0})
   elseif key == "return" or key == "space" then
     if state == "playing"  then state = "paused";  playSound(snd_pause)
     elseif state == "paused"   then state = "playing"; playSound(snd_pause)
