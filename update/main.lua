@@ -47,8 +47,10 @@ local error_msg    = ""
 local spinner_t    = 0
 local fade_alpha   = 0
 local done_timer   = 0
-local cursor_blink = 0
-local AUTO_CLOSE   = 5
+local cursor_blink  = 0
+local AUTO_CLOSE    = 5
+local startup_timer = 0
+local STARTUP_DELAY = 1.5   -- tela preta enquanto o Sway reposiciona a janela
 
 local font_title, font_label, font_small, font_term
 local worker_thread, channel, log_channel
@@ -183,6 +185,9 @@ function love.load()
 end
 
 function love.update(dt)
+  startup_timer = startup_timer + dt
+  if startup_timer < STARTUP_DELAY then return end
+
   fade_alpha   = math.min(1, fade_alpha + dt * 2.5)
   spinner_t    = spinner_t + dt
   cursor_blink = cursor_blink + dt
@@ -433,6 +438,10 @@ local function draw_terminal()
 end
 
 function love.draw()
+  if startup_timer < STARTUP_DELAY then
+    love.graphics.clear(0, 0, 0)
+    return
+  end
   draw_main_screen()
   draw_terminal()
 end
