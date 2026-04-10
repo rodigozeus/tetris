@@ -32,60 +32,7 @@ local function calc_clues(sol, n)
   return rows, cols
 end
 
-local PUZZLES = {
-  {
-    name  = "Coracao",
-    color = {0.92, 0.20, 0.20},
-    sol   = {
-      {0,0,1,1,0,1,1,0,0,0},
-      {0,1,1,1,1,1,1,1,0,0},
-      {1,1,1,1,1,1,1,1,1,0},
-      {1,1,1,1,1,1,1,1,1,0},
-      {0,1,1,1,1,1,1,1,0,0},
-      {0,0,1,1,1,1,1,0,0,0},
-      {0,0,0,1,1,1,0,0,0,0},
-      {0,0,0,0,1,0,0,0,0,0},
-      {0,0,0,0,0,0,0,0,0,0},
-      {0,0,0,0,0,0,0,0,0,0},
-    },
-  },
-  {
-    name  = "Casa",
-    color = {0.40, 0.75, 0.35},
-    sol   = {
-      {0,0,0,1,1,1,1,0,0,0},
-      {0,0,1,1,1,1,1,1,0,0},
-      {0,1,1,1,1,1,1,1,1,0},
-      {1,1,1,1,1,1,1,1,1,1},
-      {0,1,1,1,1,1,1,1,1,0},
-      {0,1,1,1,0,0,1,1,1,0},
-      {0,1,1,1,0,0,1,1,1,0},
-      {0,1,1,1,1,1,1,1,1,0},
-      {0,1,0,0,1,1,0,0,1,0},
-      {0,0,0,0,0,0,0,0,0,0},
-    },
-  },
-  {
-    name  = "Cogumelo",
-    color = {1.00, 0.30, 0.10},
-    sol   = {
-      {0,0,1,1,1,1,1,0,0,0},
-      {0,1,1,1,1,1,1,1,0,0},
-      {1,1,0,1,1,1,0,1,1,0},
-      {1,1,1,1,1,1,1,1,1,0},
-      {0,1,1,1,1,1,1,1,0,0},
-      {0,0,1,1,1,1,1,0,0,0},
-      {0,0,1,1,0,1,1,0,0,0},
-      {0,0,0,0,0,0,0,0,0,0},
-      {0,0,0,0,0,0,0,0,0,0},
-      {0,0,0,0,0,0,0,0,0,0},
-    },
-  },
-}
-
-for _, p in ipairs(PUZZLES) do
-  p.row_clues, p.col_clues = calc_clues(p.sol, 10)
-end
+local PUZZLES = {}
 
 -- ────────────────────────────────────────────────────────────────
 -- LAYOUT (calculado em love.load)
@@ -203,6 +150,18 @@ function love.load()
   fonts.title  = love.graphics.newFont(18)
 
   love.graphics.setDefaultFilter("nearest", "nearest")
+
+  -- Carrega puzzles da pasta puzzles/ em ordem alfabética
+  local files = love.filesystem.getDirectoryItems("puzzles")
+  table.sort(files)
+  for _, f in ipairs(files) do
+    if f:match("%.lua$") then
+      local p = love.filesystem.load("puzzles/" .. f)()
+      p.row_clues, p.col_clues = calc_clues(p.sol, #p.sol)
+      PUZZLES[#PUZZLES + 1] = p
+    end
+  end
+
   new_game(1)
 end
 

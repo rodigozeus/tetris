@@ -24,10 +24,11 @@ Jogos feitos em **Love2D (Lua)**, rodando num **Anbernic RG DS** com **Rocknix**
 - Grade 32×22, célula de 20px
 - Velocidade progressiva a cada comida
 - **Recorde salvo** em disco entre sessões
-- **Graça de colisão** — 0,5 s para mudar de direção e evitar a morte
+- **Graça de colisão** — 0,5 s para mudar de direção e evitar a morte; mudar direção imediatamente retoma o jogo sem esperar
+- **Turbo** — segurar A ou B dobra a velocidade enquanto pressionado
 - Áudio procedural gerado em Lua (chirp de acerto, queda grave ao morrer, bip de pause)
 
-**Controles:** D-pad para mover · Start para pausar · A para novo jogo · Select/Back para sair
+**Controles:** D-pad para mover · A / B (segurar) para turbo · Start para pausar · B para novo jogo · Select/Back para sair
 
 ---
 
