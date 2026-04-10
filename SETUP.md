@@ -112,7 +112,7 @@ Para testes no PC usar também `love.keypressed(key)` com as teclas do teclado.
 
 Arquivos ficam em:
 ```
-C:/Users/rodig/OneDrive/Área de Trabalho/pico8/nome_do_jogo/
+C:/Users/rodig/OneDrive/Área de Trabalho/games/nome_do_jogo/
 ├── main.lua
 └── conf.lua
 ```
@@ -184,7 +184,7 @@ end
 | TouchTest  | `touchtest/`  | `TouchTest.sh`  | Teste de dual screen + touch nas duas telas |
 | Lê Comigo  | `le_comigo/`  | `LeComigo.sh`   | Jogo educativo cooperativo de leitura de sílabas |
 | Picross    | `picross/`    | `Picross.sh`    | Picross com revelação de imagem na tela superior e grade interativa na inferior (dual screen) |
-| Update     | `update/`     | `Update.sh`     | Utilitário de atualização de jogos via SCP (dual screen) |
+| Update     | `update/`     | `Update.sh`     | Utilitário de atualização de jogos baixando o repositório do GitHub (dual screen) |
 
 ---
 
