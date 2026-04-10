@@ -1,11 +1,16 @@
 #!/bin/bash
-# Liga a tela de baixo (DSI-1 fica desligada por padrão no Sway)
 swaymsg 'output DSI-1 power on'
 
 SDL_VIDEODRIVER=wayland \
 LD_LIBRARY_PATH=/storage/roms/ports/moonlightnew/libs \
   /storage/roms/ports/moonlightnew/love \
-  /storage/roms/ports/touchtest
+  /storage/roms/ports/touchtest &
 
-# Desliga a tela de baixo ao sair (comportamento padrão do sistema)
+LOVE_PID=$!
+
+# Aguarda a janela abrir e a posiciona em (0,0) para cobrir os dois outputs
+sleep 1
+swaymsg '[title="Touch Test"] floating enable, border none, move absolute position 0 0'
+
+wait $LOVE_PID
 swaymsg 'output DSI-1 power off'
