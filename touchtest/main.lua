@@ -1,11 +1,11 @@
 -- Touch Test: dois botões, um em cada tela, mudam de cor ao toque
 
 local SCREEN_W = 640
-local SCREEN_H = 480  -- altura de cada tela
+local SCREEN_H = 240  -- altura de cada tela (total 480 dividido entre as duas)
 
 local btn_top = {
   x = SCREEN_W / 2,
-  y = SCREEN_H / 2,       -- centro da tela de cima
+  y = SCREEN_H / 2,              -- centro da tela de cima (y=120)
   w = 200,
   h = 80,
   label = "Tela de Cima",
@@ -16,7 +16,7 @@ local btn_top = {
 
 local btn_bot = {
   x = SCREEN_W / 2,
-  y = SCREEN_H + SCREEN_H / 2,  -- centro da tela de baixo
+  y = SCREEN_H + SCREEN_H / 2,  -- centro da tela de baixo (y=360)
   w = 200,
   h = 80,
   label = "Tela de Baixo",
@@ -59,6 +59,7 @@ function love.draw()
   love.graphics.setFont(love.graphics.newFont(14))
   love.graphics.print("Touch Test — toque nos botoes", 10, 10)
   love.graphics.print("Touch Test — toque nos botoes", 10, SCREEN_H + 10)
+
 end
 
 function love.touchpressed(id, x, y, dx, dy, pressure)
