@@ -61,8 +61,6 @@ local drag = {}         -- drag[id] = {mode, visited}
 local cur_mode   = 1    -- 1=preencher  2=marcar X
 local cell_stamp = {}   -- debounce: key -> timestamp do ultimo toque
 local DEBOUNCE   = 0.25 -- segundos minimos entre dois toques na mesma celula
-local dbg_touch = ""
-local dbg_cell  = ""
 
 -- Botões de modo (posicionados à esquerda da grade, calculados em love.load)
 local BTN_FILL = { w = 90, h = 52, label = "Preencher", val = 1 }
@@ -332,14 +330,10 @@ local function draw_bottom()
     love.graphics.printf(btn.label, btn.x, btn.y + btn.h / 2 - 6, btn.w, "center")
   end
 
-  -- Debug
+  -- Dica de controles
   love.graphics.setFont(fonts.small)
-  love.graphics.setColor(1, 0.6, 0.1)
-  love.graphics.print(dbg_touch, 648, 438)
-  love.graphics.print(dbg_cell,  648, 450)
-  love.graphics.setColor(0.5, 0.5, 0.6)
-  love.graphics.print(string.format("GX=%d GY=%d state=%s g[1][1]=%s",
-    GX, GY, tostring(state), grid and tostring(grid[1][1]) or "nil"), 648, 462)
+  love.graphics.setColor(0.32, 0.32, 0.44)
+  love.graphics.print("Arraste: aplica modo  Start: proximo  Select: sair", 648, 464)
 
   -- Overlay de vitoria (fundo)
   if state == "won" and win_timer > 0.4 then
@@ -361,26 +355,19 @@ end
 -- Arrastar: aplica o mesmo estado em todas as células percorridas.
 
 function love.touchpressed(id, x, y)
-  dbg_touch = string.format("touch x=%.0f y=%.0f", x, y)
-
   -- Botões de modo (sempre respondem)
   if hit_btn(BTN_FILL, x, y) then cur_mode = 1; return end
   if hit_btn(BTN_X,    x, y) then cur_mode = 2; return end
 
-  if state ~= "playing" then dbg_cell = "state="..state; return end
+  if state ~= "playing" then return end
   local r, c = cell_at(x, y)
-  if not r then dbg_cell = "cell=nil"; return end
+  if not r then return end
 
   -- Debounce: ignora segundo evento rapido na mesma celula
   local key = r * 100 + c
   local now = love.timer.getTime()
-  if cell_stamp[key] and (now - cell_stamp[key]) < DEBOUNCE then
-    dbg_cell = string.format("cell=(%d,%d) DEBOUNCED", r, c)
-    return
-  end
+  if cell_stamp[key] and (now - cell_stamp[key]) < DEBOUNCE then return end
   cell_stamp[key] = now
-
-  dbg_cell = string.format("cell=(%d,%d) cur=%d g=%d", r, c, cur_mode, grid[r][c])
   local new_val = (grid[r][c] == cur_mode) and 0 or cur_mode
   set_cell(r, c, new_val)
   drag[id] = { mode = new_val, visited = { [key] = true } }
