@@ -50,7 +50,7 @@ local done_timer   = 0
 local cursor_blink  = 0
 local AUTO_CLOSE    = 5
 local startup_timer = 0
-local STARTUP_DELAY = 1.5   -- tela preta enquanto o Sway reposiciona a janela
+local STARTUP_DELAY = 0.3   -- tela preta enquanto o Sway reposiciona a janela
 
 local font_title, font_label, font_small, font_term
 local worker_thread, channel, log_channel
