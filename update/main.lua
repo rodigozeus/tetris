@@ -79,7 +79,7 @@ local WORKER = string.format([[
     local h = io.popen(cmd .. " 2>&1")
     if h then
       for line in h:lines() do
-        if line:match("%S") then
+        if line:match("%%S") then
           log("  " .. line)
         end
       end
