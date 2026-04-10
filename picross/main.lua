@@ -57,10 +57,12 @@ local grid       -- grid[r][c]: 0=vazia  1=preenchida  2=marcada X
 local state      -- "playing" | "won"
 local win_timer
 local fonts = {}
-local drag = {}   -- drag[id] = {mode, visited}
-local cur_mode = 1  -- 1=preencher  2=marcar X
-local dbg_touch = ""  -- debug: ultimo toque
-local dbg_cell  = ""  -- debug: celula encontrada
+local drag = {}         -- drag[id] = {mode, visited}
+local cur_mode   = 1    -- 1=preencher  2=marcar X
+local cell_stamp = {}   -- debounce: key -> timestamp do ultimo toque
+local DEBOUNCE   = 0.25 -- segundos minimos entre dois toques na mesma celula
+local dbg_touch = ""
+local dbg_cell  = ""
 
 -- Botões de modo (posicionados à esquerda da grade, calculados em love.load)
 local BTN_FILL = { w = 90, h = 52, label = "Preencher", val = 1 }
@@ -83,9 +85,10 @@ local function new_game(idx)
     grid[r] = {}
     for c = 1, N do grid[r][c] = 0 end
   end
-  state     = "playing"
-  win_timer = 0
-  drag      = {}
+  state       = "playing"
+  win_timer   = 0
+  drag        = {}
+  cell_stamp  = {}
 end
 
 local function cell_at(x, y)
@@ -368,11 +371,19 @@ function love.touchpressed(id, x, y)
   local r, c = cell_at(x, y)
   if not r then dbg_cell = "cell=nil"; return end
 
+  -- Debounce: ignora segundo evento rapido na mesma celula
+  local key = r * 100 + c
+  local now = love.timer.getTime()
+  if cell_stamp[key] and (now - cell_stamp[key]) < DEBOUNCE then
+    dbg_cell = string.format("cell=(%d,%d) DEBOUNCED", r, c)
+    return
+  end
+  cell_stamp[key] = now
+
   dbg_cell = string.format("cell=(%d,%d) cur=%d g=%d", r, c, cur_mode, grid[r][c])
-  -- Se a célula já tem o modo atual, limpa; senão aplica
   local new_val = (grid[r][c] == cur_mode) and 0 or cur_mode
   set_cell(r, c, new_val)
-  drag[id] = { mode = new_val, visited = { [r * 100 + c] = true } }
+  drag[id] = { mode = new_val, visited = { [key] = true } }
 end
 
 function love.touchmoved(id, x, y)
