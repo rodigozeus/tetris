@@ -7,7 +7,7 @@ local HUD_H     = 40          -- altura do cabeçalho
 local TICK      = 0.20        -- segundos por movimento
 local SPEED_INC = 0.005       -- redução do tick a cada comida
 
-local state, snake, dir, nextDir, food, score, best, timer, speed, deathTimer
+local state, snake, dir, nextDir, food, score, best, timer, speed, deathTimer, turbo
 local snd_eat, snd_die, snd_pause
 
 -- ── áudio procedural ─────────────────────────────────────────────────────────
@@ -78,6 +78,7 @@ local function reset()
   speed   = TICK
   timer      = 0
   deathTimer = 0
+  turbo      = false
   food       = newFood()
   state      = "playing"
 end
@@ -150,8 +151,9 @@ function love.update(dt)
 
   if state ~= "playing" then return end
 
+  local tick = turbo and (speed / 2) or speed
   timer = timer + dt
-  if timer < speed then return end
+  if timer < tick then return end
   timer = 0
 
   -- aplica direção pendente (sem inverter 180°)
@@ -287,15 +289,25 @@ function love.gamepadpressed(_, button)
   elseif button == "dpdown"  then tryDir({x = 0, y =  1})
   elseif button == "dpleft"  then tryDir({x = -1, y = 0})
   elseif button == "dpright" then tryDir({x =  1, y = 0})
+  elseif button == "a" or button == "b" then
+    if state == "playing" or state == "dying" then
+      turbo = true
+    elseif button == "b" and state == "gameover" then
+      reset()
+    end
   elseif button == "start" then
     if state == "playing"  then state = "paused";  playSound(snd_pause)
     elseif state == "paused"   then state = "playing"; playSound(snd_pause)
     elseif state == "gameover" then love.event.quit()
     end
-  elseif button == "b" then
-    if state == "gameover" then reset() end
   elseif button == "back" then
     love.event.quit()
+  end
+end
+
+function love.gamepadreleased(_, button)
+  if button == "a" or button == "b" then
+    turbo = false
   end
 end
 
@@ -306,6 +318,8 @@ function love.keypressed(key)
   elseif key == "down"  or key == "s" then tryDir({x = 0, y =  1})
   elseif key == "left"  or key == "a" then tryDir({x = -1, y = 0})
   elseif key == "right" or key == "d" then tryDir({x =  1, y = 0})
+  elseif key == "z" or key == "x" then
+    if state == "playing" or state == "dying" then turbo = true end
   elseif key == "return" or key == "space" then
     if state == "playing"  then state = "paused";  playSound(snd_pause)
     elseif state == "paused"   then state = "playing"; playSound(snd_pause)
@@ -317,5 +331,11 @@ function love.keypressed(key)
     end
   elseif key == "escape" then
     love.event.quit()
+  end
+end
+
+function love.keyreleased(key)
+  if key == "z" or key == "x" then
+    turbo = false
   end
 end
