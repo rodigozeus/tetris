@@ -7,7 +7,7 @@ local HUD_H     = 40          -- altura do cabeçalho
 local TICK      = 0.20        -- segundos por movimento
 local SPEED_INC = 0.005       -- redução do tick a cada comida
 
-local state, snake, dir, nextDir, food, score, best, timer, speed
+local state, snake, dir, nextDir, food, score, best, timer, speed, deathTimer
 local snd_eat, snd_die, snd_pause
 
 -- ── áudio procedural ─────────────────────────────────────────────────────────
@@ -76,9 +76,10 @@ local function reset()
   nextDir = {x = 1, y = 0}
   score   = 0
   speed   = TICK
-  timer   = 0
-  food    = newFood()
-  state   = "playing"
+  timer      = 0
+  deathTimer = 0
+  food       = newFood()
+  state      = "playing"
 end
 
 function love.load()
@@ -112,7 +113,41 @@ end
 
 -- ── update ────────────────────────────────────────────────────────────────────
 
+local function checkCollision(head)
+  if head.x < 1 or head.x > COLS or head.y < 1 or head.y > ROWS then
+    return true
+  end
+  for i = 1, #snake - 1 do
+    if snake[i].x == head.x and snake[i].y == head.y then
+      return true
+    end
+  end
+  return false
+end
+
 function love.update(dt)
+  -- estado de graça: cobra congelada, jogador pode mudar direção
+  if state == "dying" then
+    deathTimer = deathTimer + dt
+    if deathTimer >= 0.5 then
+      local testDir = nextDir
+      if testDir.x == -dir.x and testDir.y == -dir.y then
+        testDir = dir
+      end
+      local head = {x = snake[1].x + testDir.x, y = snake[1].y + testDir.y}
+      if checkCollision(head) then
+        state = "gameover"
+        playSound(snd_die)
+        if score > best then best = score; saveBest(best) end
+      else
+        state   = "playing"
+        dir     = testDir
+        timer   = speed   -- força mover na próxima tick
+      end
+    end
+    return
+  end
+
   if state ~= "playing" then return end
 
   timer = timer + dt
@@ -127,22 +162,11 @@ function love.update(dt)
   -- nova cabeça
   local head = {x = snake[1].x + dir.x, y = snake[1].y + dir.y}
 
-  -- colisão com parede
-  if head.x < 1 or head.x > COLS or head.y < 1 or head.y > ROWS then
-    state = "gameover"
-    playSound(snd_die)
-    if score > best then best = score; saveBest(best) end
+  -- colisão com parede ou corpo → entra em graça de 0.5s
+  if checkCollision(head) then
+    state      = "dying"
+    deathTimer = 0
     return
-  end
-
-  -- colisão com corpo (exceto última peça que vai ser removida)
-  for i = 1, #snake - 1 do
-    if snake[i].x == head.x and snake[i].y == head.y then
-      state = "gameover"
-      playSound(snd_die)
-      if score > best then best = score; saveBest(best) end
-      return
-    end
   end
 
   table.insert(snake, 1, head)
@@ -185,16 +209,27 @@ function love.draw()
     love.graphics.line(0, HUD_H + y * CELL, COLS * CELL, HUD_H + y * CELL)
   end
 
-  -- cobra
-  for i, seg in ipairs(snake) do
-    local rx, ry, rw, rh = cellRect(seg.x, seg.y)
-    if i == 1 then
-      love.graphics.setColor(0.3, 1.0, 0.3)   -- cabeça mais clara
-    else
-      local t = 1 - (i / #snake) * 0.5
-      love.graphics.setColor(0.1, t * 0.8, 0.1)
+  -- cobra (pisca durante graça de colisão)
+  local dyingFlash = state ~= "dying" or (math.floor(deathTimer * 10) % 2 == 0)
+  if dyingFlash then
+    for i, seg in ipairs(snake) do
+      local rx, ry, rw, rh = cellRect(seg.x, seg.y)
+      if i == 1 then
+        if state == "dying" then
+          love.graphics.setColor(1.0, 0.4, 0.1)  -- laranja na graça
+        else
+          love.graphics.setColor(0.3, 1.0, 0.3)
+        end
+      else
+        local t = 1 - (i / #snake) * 0.5
+        if state == "dying" then
+          love.graphics.setColor(t * 0.8, t * 0.3, 0.0)
+        else
+          love.graphics.setColor(0.1, t * 0.8, 0.1)
+        end
+      end
+      love.graphics.rectangle("fill", rx + 1, ry + 1, rw - 2, rh - 2)
     end
-    love.graphics.rectangle("fill", rx + 1, ry + 1, rw - 2, rh - 2)
   end
 
   -- comida
