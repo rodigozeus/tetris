@@ -93,12 +93,12 @@ Pensado para ser jogado **em dupla**: a criança lê a sílaba em voz alta, o ad
 ---
 
 ### Update
-> Atualizador de jogos direto do console.
+> Atualizador de jogos direto do console, em dual screen.
 
-- Baixa o repositório do GitHub como `.zip` via `wget`
-- Extrai e instala os arquivos em `/storage/roms/ports/`
-- Interface com progresso em etapas (Conectando → Baixando → Extraindo → Instalando → Finalizando)
-- Spinner animado, ícones de check/erro, fecha automaticamente após 5 s de sucesso
+- **Tela superior** — interface de progresso em etapas (Conectando → Baixando → Extraindo → Instalando → Finalizando) com spinner animado e ícones de check/erro
+- **Tela inferior** — terminal estilo instalação: fundo preto, saída real dos comandos em tempo real (`wget`, `unzip` listando cada arquivo, `cp -rv` mostrando cada cópia)
+- Fecha automaticamente 5 s após o sucesso
+- `STARTUP_DELAY` de 0,3 s garante tela preta enquanto o Sway reposiciona a janela — evita o flash deslocado
 
 ---
 

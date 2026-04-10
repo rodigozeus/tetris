@@ -232,6 +232,26 @@ swaymsg 'output DSI-1 power off'
 
 > O `sleep 1` + `swaymsg` é necessário porque o Sway centraliza janelas floating no output ativo (DSI-2), deslocando a janela de 1280px em -320px. O swaymsg força a posição (0,0) depois que a janela abre.
 
+> **STARTUP_DELAY:** mesmo com o swaymsg, a janela já renderiza deslocada durante o primeiro segundo. A solução é fazer o `love.draw()` pintar tela preta enquanto o timer não expirar, evitando o flash deslocado. Um delay de **0,3 s** já é suficiente e não prejudica a experiência:
+> ```lua
+> local startup_timer = 0
+> local STARTUP_DELAY = 0.3
+>
+> function love.update(dt)
+>   startup_timer = startup_timer + dt
+>   if startup_timer < STARTUP_DELAY then return end
+>   -- lógica normal...
+> end
+>
+> function love.draw()
+>   if startup_timer < STARTUP_DELAY then
+>     love.graphics.clear(0, 0, 0)
+>     return
+>   end
+>   -- desenho normal...
+> end
+> ```
+
 ### Coordenadas no main.lua
 
 ```
