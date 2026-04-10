@@ -60,6 +60,7 @@ local fonts = {}
 local drag = {}   -- drag[id] = {mode, visited}
 local cur_mode = 1  -- 1=preencher  2=marcar X
 local dbg_touch = ""  -- debug: ultimo toque
+local dbg_cell  = ""  -- debug: celula encontrada
 
 -- Botões de modo (posicionados à esquerda da grade, calculados em love.load)
 local BTN_FILL = { w = 90, h = 52, label = "Preencher", val = 1 }
@@ -328,12 +329,14 @@ local function draw_bottom()
     love.graphics.printf(btn.label, btn.x, btn.y + btn.h / 2 - 6, btn.w, "center")
   end
 
-  -- Debug: coordenadas do ultimo toque
+  -- Debug
   love.graphics.setFont(fonts.small)
   love.graphics.setColor(1, 0.6, 0.1)
-  love.graphics.print(dbg_touch, 648, 450)
-  love.graphics.setColor(0.32, 0.32, 0.44)
-  love.graphics.printf(string.format("GX=%d GY=%d", GX, GY), 648, 464, 400)
+  love.graphics.print(dbg_touch, 648, 438)
+  love.graphics.print(dbg_cell,  648, 450)
+  love.graphics.setColor(0.5, 0.5, 0.6)
+  love.graphics.print(string.format("GX=%d GY=%d state=%s g[1][1]=%s",
+    GX, GY, tostring(state), grid and tostring(grid[1][1]) or "nil"), 648, 462)
 
   -- Overlay de vitoria (fundo)
   if state == "won" and win_timer > 0.4 then
@@ -361,10 +364,11 @@ function love.touchpressed(id, x, y)
   if hit_btn(BTN_FILL, x, y) then cur_mode = 1; return end
   if hit_btn(BTN_X,    x, y) then cur_mode = 2; return end
 
-  if state ~= "playing" then return end
+  if state ~= "playing" then dbg_cell = "state="..state; return end
   local r, c = cell_at(x, y)
-  if not r then return end
+  if not r then dbg_cell = "cell=nil"; return end
 
+  dbg_cell = string.format("cell=(%d,%d) cur=%d g=%d", r, c, cur_mode, grid[r][c])
   -- Se a célula já tem o modo atual, limpa; senão aplica
   local new_val = (grid[r][c] == cur_mode) and 0 or cur_mode
   set_cell(r, c, new_val)
