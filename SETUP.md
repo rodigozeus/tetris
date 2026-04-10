@@ -182,7 +182,68 @@ end
 | Quiz      | `quiz_love/`  | `Quiz.sh`      | Quiz de múltipla escolha, 4 perguntas |
 | Tetris    | `tetris/`     | `Tetris.sh`    | Tetris clássico com níveis e score |
 | Snake     | `snake/`      | `Snake.sh`     | Snake com velocidade progressiva e recorde persistente |
-| KeyMapper | `keymapper/`  | `KeyMapper.sh` | Utilitário para detectar e salvar o mapeamento de botões do gamepad |
+| KeyMapper  | `keymapper/`   | `KeyMapper.sh`  | Utilitário para detectar e salvar o mapeamento de botões do gamepad |
+| TouchTest  | `touchtest/`   | `TouchTest.sh`  | Teste de dual screen + touch nas duas telas |
+
+---
+
+## Dual Screen e Touch
+
+O Anbernic RG DS tem duas telas de **640x480** cada, gerenciadas pelo Wayland (Sway) como dois outputs DSI separados:
+
+| Output | Posição Wayland | Tela física |
+|--------|----------------|-------------|
+| DSI-2  | x=0, y=0       | Tela de cima |
+| DSI-1  | x=640, y=0     | Tela de baixo |
+
+O espaço virtual total é **1280x480**. DSI-1 fica **desligado por padrão** (o EmulationStation o desliga ao iniciar).
+
+### Como usar as duas telas num jogo
+
+**conf.lua:**
+```lua
+function love.conf(t)
+  t.window.width      = 1280   -- cobre os dois outputs
+  t.window.height     = 480
+  t.window.fullscreen = false
+  t.window.borderless = true
+  t.window.x          = 0
+  t.window.y          = 0
+end
+```
+
+**Script de lançamento (.sh):**
+```bash
+#!/bin/bash
+swaymsg 'output DSI-1 power on'
+
+SDL_VIDEODRIVER=wayland \
+LD_LIBRARY_PATH=/storage/roms/ports/moonlightnew/libs \
+  /storage/roms/ports/moonlightnew/love \
+  /storage/roms/ports/meujogo &
+
+LOVE_PID=$!
+sleep 1
+swaymsg '[title="Título do Jogo"] floating enable, border none, move absolute position 0 0'
+
+wait $LOVE_PID
+swaymsg 'output DSI-1 power off'
+```
+
+> O `sleep 1` + `swaymsg` é necessário porque o Sway centraliza janelas floating no output ativo (DSI-2), deslocando a janela de 1280px em -320px. O swaymsg força a posição (0,0) depois que a janela abre.
+
+### Coordenadas no main.lua
+
+```
+Tela de cima (DSI-2): x = 0  .. 639  →  centro x = 320
+Tela de baixo (DSI-1): x = 640 .. 1279 →  centro x = 960
+```
+
+### Touch
+
+- Touch funciona nas **duas telas**
+- Coordenadas chegam em `love.touchpressed(id, x, y)` no espaço da janela (0..1279)
+- Tela de cima: x = 0..639 | Tela de baixo: x = 640..1279
 
 ---
 

@@ -45,10 +45,6 @@ function love.load()
 end
 
 function love.draw()
-  -- separador vertical entre as telas
-  love.graphics.setColor(0.4, 0.4, 0.4)
-  love.graphics.rectangle("fill", 638, 0, 4, 480)
-
   draw_button(btn_top)
   draw_button(btn_bot)
 
