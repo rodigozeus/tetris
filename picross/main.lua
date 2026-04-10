@@ -110,7 +110,7 @@ local grid       -- grid[r][c]: 0=vazia  1=preenchida  2=marcada X
 local state      -- "playing" | "won"
 local win_timer
 local fonts = {}
-local touches = {}
+local drag = {}   -- drag[id] = {mode, visited}
 
 -- ────────────────────────────────────────────────────────────────
 -- HELPERS
@@ -126,7 +126,7 @@ local function new_game(idx)
   end
   state     = "playing"
   win_timer = 0
-  touches   = {}
+  drag      = {}
 end
 
 local function cell_at(x, y)
@@ -220,10 +220,10 @@ local function draw_top()
           local col = puzzle.color
           love.graphics.setColor(col[1], col[2], col[3])
         else
-          love.graphics.setColor(0.11, 0.11, 0.18)
+          love.graphics.setColor(0.10, 0.10, 0.15)
         end
       else
-        love.graphics.setColor(0.08, 0.08, 0.13)
+        love.graphics.setColor(0.10, 0.10, 0.15)
       end
       love.graphics.rectangle("fill", x + 1, y + 1, ICELL - 2, ICELL - 2)
 
@@ -232,11 +232,6 @@ local function draw_top()
       love.graphics.rectangle("line", x, y, ICELL, ICELL)
     end
   end
-
-  -- Nome do puzzle
-  love.graphics.setFont(fonts.title)
-  love.graphics.setColor(0.60, 0.60, 0.75)
-  love.graphics.print(puzzle.name, 8, 8)
 
   -- Progresso
   love.graphics.setFont(fonts.small)
@@ -345,7 +340,7 @@ local function draw_bottom()
   -- Dica de controles
   love.graphics.setFont(fonts.small)
   love.graphics.setColor(0.32, 0.32, 0.44)
-  love.graphics.print("Toque: preencher  Segure: marcar X  Start: proximo", 648, 464)
+  love.graphics.print("Toque: vazia->preench.->X  Arraste: preenche  Start: proximo", 648, 464)
 
   -- Overlay de vitoria (fundo)
   if state == "won" and win_timer > 0.4 then
@@ -362,68 +357,33 @@ end
 -- ────────────────────────────────────────────────────────────────
 -- INPUT — TOUCH
 -- ────────────────────────────────────────────────────────────────
-
-local LONG_PRESS = 0.35  -- segundos para ativar marcacao X
+-- Age no touchpressed (resposta imediata, sem depender do release).
+-- Toque simples: cicla vazia(0) → preenchida(1) → X(2) → vazia(0)
+-- Arrastar: aplica o mesmo estado em todas as células percorridas.
 
 function love.touchpressed(id, x, y)
   if state ~= "playing" then return end
-  touches[id] = {
-    sx       = x,
-    sy       = y,
-    time     = love.timer.getTime(),
-    dragging = false,
-    mode     = nil,
-    visited  = {},
-  }
+  local r, c = cell_at(x, y)
+  if not r then return end
+  local new_val = (grid[r][c] + 1) % 3
+  set_cell(r, c, new_val)
+  drag[id] = { mode = new_val, visited = { [r * 100 + c] = true } }
 end
 
 function love.touchmoved(id, x, y)
-  local t = touches[id]
-  if not t or state ~= "playing" then return end
-
-  if not t.dragging then
-    if math.abs(x - t.sx) > 8 or math.abs(y - t.sy) > 8 then
-      t.dragging = true
-      local r, c = cell_at(t.sx, t.sy)
-      if r then
-        t.mode = (grid[r][c] == 0) and 1 or 0
-        local key = r * 100 + c
-        t.visited[key] = true
-        set_cell(r, c, t.mode)
-      end
-    end
-  end
-
-  if t.dragging and t.mode then
-    local r, c = cell_at(x, y)
-    if r then
-      local key = r * 100 + c
-      if not t.visited[key] then
-        t.visited[key] = true
-        set_cell(r, c, t.mode)
-      end
-    end
+  local d = drag[id]
+  if not d or state ~= "playing" then return end
+  local r, c = cell_at(x, y)
+  if not r then return end
+  local key = r * 100 + c
+  if not d.visited[key] then
+    d.visited[key] = true
+    set_cell(r, c, d.mode)
   end
 end
 
-function love.touchreleased(id, x, y)
-  local t = touches[id]
-  touches[id] = nil
-  if not t or state ~= "playing" then return end
-
-  if not t.dragging then
-    local r, c = cell_at(x, y)
-    if r then
-      local held = love.timer.getTime() - t.time
-      if held >= LONG_PRESS then
-        -- Toque longo: marca/desmarca X
-        set_cell(r, c, grid[r][c] == 2 and 0 or 2)
-      else
-        -- Toque curto: preenche/apaga
-        set_cell(r, c, grid[r][c] == 1 and 0 or 1)
-      end
-    end
-  end
+function love.touchreleased(id)
+  drag[id] = nil
 end
 
 -- ────────────────────────────────────────────────────────────────
@@ -431,6 +391,7 @@ end
 -- ────────────────────────────────────────────────────────────────
 
 function love.gamepadpressed(_, btn)
+  if btn == "back" then love.event.quit() end
   if btn == "start" or (state == "won" and btn == "b") then
     new_game((puzzle_idx % #PUZZLES) + 1)
   end
@@ -456,5 +417,5 @@ function love.mousemoved(x, y)
 end
 
 function love.mousereleased(x, y, btn)
-  if btn == 1 then love.touchreleased("m", x, y) end
+  if btn == 1 then love.touchreleased("m") end
 end
