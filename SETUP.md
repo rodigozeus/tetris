@@ -179,11 +179,12 @@ end
 
 | Jogo | Pasta | Script | Descrição |
 |------|-------|--------|-----------|
-| Quiz      | `quiz_love/`  | `Quiz.sh`      | Quiz de múltipla escolha, 4 perguntas |
-| Tetris    | `tetris/`     | `Tetris.sh`    | Tetris clássico com níveis e score |
-| Snake     | `snake/`      | `Snake.sh`     | Snake com velocidade progressiva e recorde persistente |
-| KeyMapper  | `keymapper/`   | `KeyMapper.sh`  | Utilitário para detectar e salvar o mapeamento de botões do gamepad |
-| TouchTest  | `touchtest/`   | `TouchTest.sh`  | Teste de dual screen + touch nas duas telas |
+| Tetris     | `tetris/`     | `Tetris.sh`     | Tetris clássico com níveis e score |
+| Snake      | `snake/`      | `Snake.sh`      | Snake com velocidade progressiva e recorde persistente |
+| TouchTest  | `touchtest/`  | `TouchTest.sh`  | Teste de dual screen + touch nas duas telas |
+| Lê Comigo  | `le_comigo/`  | `LeComigo.sh`   | Jogo educativo cooperativo de leitura de sílabas |
+| Picross    | `picross/`    | `Picross.sh`    | Picross com revelação de imagem na tela superior e grade interativa na inferior (dual screen) |
+| Update     | `update/`     | `Update.sh`     | Utilitário de atualização de jogos via SCP (dual screen) |
 
 ---
 
