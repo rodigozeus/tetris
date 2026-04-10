@@ -111,6 +111,16 @@ local state      -- "playing" | "won"
 local win_timer
 local fonts = {}
 local drag = {}   -- drag[id] = {mode, visited}
+local cur_mode = 1  -- 1=preencher  2=marcar X
+
+-- Botões de modo (posicionados à esquerda da grade, calculados em love.load)
+local BTN_FILL = { w = 90, h = 52, label = "Preencher", val = 1 }
+local BTN_X    = { w = 90, h = 52, label = "Marcar X",  val = 2 }
+
+local function hit_btn(btn, tx, ty)
+  return tx >= btn.x and tx <= btn.x + btn.w
+     and ty >= btn.y and ty <= btn.y + btn.h
+end
 
 -- ────────────────────────────────────────────────────────────────
 -- HELPERS
@@ -178,6 +188,13 @@ function love.load()
 
   IX = math.floor((640 - N * ICELL) / 2)
   IY = math.floor((480 - N * ICELL) / 2)
+
+  -- Botões de modo: centralizados na faixa à esquerda da grade (x=640..GX-CW)
+  local bx = 640 + math.floor(((GX - CW - 640) - BTN_FILL.w) / 2)
+  local total_bh = BTN_FILL.h + 14 + BTN_X.h
+  local by = math.floor((480 - total_bh) / 2)
+  BTN_FILL.x = bx;  BTN_FILL.y = by
+  BTN_X.x    = bx;  BTN_X.y    = by + BTN_FILL.h + 14
 
   fonts.small  = love.graphics.newFont(11)
   fonts.medium = love.graphics.newFont(15)
@@ -337,10 +354,24 @@ local function draw_bottom()
   end
   love.graphics.setLineWidth(1)
 
+  -- Botões de modo
+  for _, btn in ipairs({ BTN_FILL, BTN_X }) do
+    local active = (cur_mode == btn.val)
+    if active then
+      love.graphics.setColor(0.30, 0.52, 0.80)
+    else
+      love.graphics.setColor(0.18, 0.18, 0.28)
+    end
+    love.graphics.rectangle("fill", btn.x, btn.y, btn.w, btn.h, 6, 6)
+    love.graphics.setColor(active and 1 or 0.55, active and 1 or 0.55, active and 1 or 0.60)
+    love.graphics.setFont(fonts.small)
+    love.graphics.printf(btn.label, btn.x, btn.y + btn.h / 2 - 6, btn.w, "center")
+  end
+
   -- Dica de controles
   love.graphics.setFont(fonts.small)
   love.graphics.setColor(0.32, 0.32, 0.44)
-  love.graphics.print("Toque: vazia->preench.->X  Arraste: preenche  Start: proximo", 648, 464)
+  love.graphics.print("Arraste: aplica modo  Start: proximo  Select: sair", 648, 464)
 
   -- Overlay de vitoria (fundo)
   if state == "won" and win_timer > 0.4 then
@@ -362,10 +393,16 @@ end
 -- Arrastar: aplica o mesmo estado em todas as células percorridas.
 
 function love.touchpressed(id, x, y)
+  -- Botões de modo (sempre respondem)
+  if hit_btn(BTN_FILL, x, y) then cur_mode = 1; return end
+  if hit_btn(BTN_X,    x, y) then cur_mode = 2; return end
+
   if state ~= "playing" then return end
   local r, c = cell_at(x, y)
   if not r then return end
-  local new_val = (grid[r][c] + 1) % 3
+
+  -- Se a célula já tem o modo atual, limpa; senão aplica
+  local new_val = (grid[r][c] == cur_mode) and 0 or cur_mode
   set_cell(r, c, new_val)
   drag[id] = { mode = new_val, visited = { [r * 100 + c] = true } }
 end
