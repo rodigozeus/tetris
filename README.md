@@ -68,6 +68,20 @@ Pensado para ser jogado **em dupla**: a criança lê a sílaba em voz alta, o ad
 
 ---
 
+### Picross
+> Nonograma com revelação progressiva de imagem em dual screen.
+
+- **Tela superior** mostra a imagem que vai sendo revelada conforme você acerta células
+- **Tela inferior** exibe a grade com dicas de linhas e colunas — interação por touch
+- Dicas ficam **verdes** quando a linha ou coluna está corretamente resolvida
+- Dois modos de marcação selecionáveis por botão: **Preencher** e **Marcar X**
+- Arrastar o dedo preenche/apaga várias células de uma vez
+- Puzzles em arquivos `.lua` individuais na pasta `puzzles/` — adicionar novos não requer alterar o código
+
+**Controles:** Touch na tela inferior · Start: próximo puzzle · Select: sair
+
+---
+
 ### Touch Test
 > Utilitário para validar o funcionamento das duas telas e do touch.
 
@@ -97,11 +111,14 @@ games/
 ├── le_comigo/      main.lua + conf.lua
 ├── touchtest/      main.lua + conf.lua
 ├── update/         main.lua + conf.lua
+├── picross/        main.lua + conf.lua
+│   └── puzzles/    ← arquivos .lua com os puzzles (um por arquivo)
 ├── Snake.sh        ← script de lançamento no console
 ├── Tetris.sh
 ├── LeComigo.sh
 ├── TouchTest.sh
 ├── Update.sh
+├── Picross.sh
 └── SETUP.md        ← documentação técnica completa do ambiente
 ```
 

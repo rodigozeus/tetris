@@ -59,6 +59,7 @@ local win_timer
 local fonts = {}
 local drag = {}   -- drag[id] = {mode, visited}
 local cur_mode = 1  -- 1=preencher  2=marcar X
+local dbg_touch = ""  -- debug: ultimo toque
 
 -- Botões de modo (posicionados à esquerda da grade, calculados em love.load)
 local BTN_FILL = { w = 90, h = 52, label = "Preencher", val = 1 }
@@ -327,10 +328,12 @@ local function draw_bottom()
     love.graphics.printf(btn.label, btn.x, btn.y + btn.h / 2 - 6, btn.w, "center")
   end
 
-  -- Dica de controles
+  -- Debug: coordenadas do ultimo toque
   love.graphics.setFont(fonts.small)
+  love.graphics.setColor(1, 0.6, 0.1)
+  love.graphics.print(dbg_touch, 648, 450)
   love.graphics.setColor(0.32, 0.32, 0.44)
-  love.graphics.print("Arraste: aplica modo  Start: proximo  Select: sair", 648, 464)
+  love.graphics.printf(string.format("GX=%d GY=%d", GX, GY), 648, 464, 400)
 
   -- Overlay de vitoria (fundo)
   if state == "won" and win_timer > 0.4 then
@@ -352,6 +355,8 @@ end
 -- Arrastar: aplica o mesmo estado em todas as células percorridas.
 
 function love.touchpressed(id, x, y)
+  dbg_touch = string.format("touch x=%.0f y=%.0f", x, y)
+
   -- Botões de modo (sempre respondem)
   if hit_btn(BTN_FILL, x, y) then cur_mode = 1; return end
   if hit_btn(BTN_X,    x, y) then cur_mode = 2; return end
