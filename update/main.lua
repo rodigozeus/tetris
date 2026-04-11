@@ -1,5 +1,5 @@
 -- Atualizador de Jogos
--- Tela de progresso (640×480) — funciona no RG DS e RG 35XX SP
+-- Painel de progresso espelhado nas duas telas (RG DS) ou tela única (RG 35XX SP)
 
 local W, H = 640, 480
 
@@ -8,7 +8,6 @@ local TMP_ZIP  = "/tmp/tetris_update.zip"
 local TMP_DIR  = "/tmp/tetris_update_dir"
 local PORTS    = "/storage/roms/ports"
 
--- Paleta
 local C = {
   bg       = {0.07, 0.09, 0.14},
   title    = {0.45, 0.82, 1.00},
@@ -65,7 +64,6 @@ local WORKER = string.format([[
 
   ch:push("downloading")
   run("wget --no-verbose '" .. REPO_URL .. "' -O '" .. TMP_ZIP .. "'")
-
   if not file_exists(TMP_ZIP) then
     ch:push("error:Falha ao baixar. Verifique a conexão.")
     return
@@ -75,7 +73,6 @@ local WORKER = string.format([[
   run("rm -rf '" .. TMP_DIR .. "'")
   run("mkdir -p '" .. TMP_DIR .. "'")
   run("unzip '" .. TMP_ZIP .. "' -d '" .. TMP_DIR .. "'")
-
   if not dir_exists(TMP_DIR .. "/tetris-master") then
     ch:push("error:Falha ao extrair o arquivo.")
     return
@@ -139,9 +136,7 @@ function love.update(dt)
 
   if status == "done" then
     done_timer = done_timer + dt
-    if done_timer >= AUTO_CLOSE then
-      love.event.quit()
-    end
+    if done_timer >= AUTO_CLOSE then love.event.quit() end
   end
 end
 
@@ -181,11 +176,12 @@ local function draw_dot_outline(x, y)
   love.graphics.circle("line", x, y, 7)
 end
 
-function love.draw()
-  if startup_timer < STARTUP_DELAY then
-    love.graphics.clear(0, 0, 0)
-    return
-  end
+-- Desenha o painel de progresso na posição atual (chamado com translate ativo)
+local function draw_panel()
+  local ix = 200
+  local lx = 228
+  local sy = 138
+  local sg = 50
 
   -- fundo
   love.graphics.setColor(C.bg[1], C.bg[2], C.bg[3])
@@ -211,15 +207,9 @@ function love.draw()
   love.graphics.rectangle("fill", 60, 78, W - 120, 1)
 
   -- steps
-  local ix = 200
-  local lx = 228
-  local sy = 138
-  local sg = 50
-
   for i, step in ipairs(STEPS) do
     local y  = sy + (i - 1) * sg
     local iy = y + 10
-
     local is_error   = (status == "error"  and i == current_step)
     local is_current = (status == "running" and i == current_step)
     local is_done    = (i < current_step) or (status == "done")
@@ -273,14 +263,26 @@ function love.draw()
   love.graphics.printf("Anbernic  ·  Rocknix", 0, 468, W, "center")
 end
 
-function love.gamepadpressed()
-  if status == "done" or status == "error" then
-    love.event.quit()
+function love.draw()
+  if startup_timer < STARTUP_DELAY then
+    love.graphics.clear(0, 0, 0)
+    return
   end
+
+  -- tela principal (DSI-2 no RG DS, tela única no RG 35XX SP)
+  draw_panel()
+
+  -- tela de baixo espelhada (DSI-1 no RG DS)
+  love.graphics.push()
+  love.graphics.translate(W, 0)
+  draw_panel()
+  love.graphics.pop()
+end
+
+function love.gamepadpressed()
+  if status == "done" or status == "error" then love.event.quit() end
 end
 
 function love.keypressed()
-  if status == "done" or status == "error" then
-    love.event.quit()
-  end
+  if status == "done" or status == "error" then love.event.quit() end
 end
