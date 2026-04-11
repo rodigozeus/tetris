@@ -268,6 +268,21 @@ Tela de baixo (DSI-1): x = 640 .. 1279 →  centro x = 960
 
 ---
 
+## Rocknix — Downloads e Atualizações
+
+O RG DS só tem suporte nas **nightly builds** do Rocknix (versões estáveis no GitHub não incluem o dispositivo).
+
+| Tipo | URL |
+|------|-----|
+| Releases estáveis | [github.com/ROCKNIX/distribution/releases](https://github.com/ROCKNIX/distribution/releases) |
+| Nightly builds | [github.com/ROCKNIX/distribution-nightly/releases](https://github.com/ROCKNIX/distribution-nightly/releases) |
+
+Para o RG DS baixar: **`ROCKNIX-RK3566.aarch64-<DATA>-Specific.img.gz`**
+
+O servidor de atualização automática (`update.rocknix.org`) **não lista as nightly builds de 2026** — para downgrade manual, usar o GitHub acima.
+
+---
+
 ## Notas
 
 - O console fica acessível via SSH enquanto estiver na mesma rede Wi-Fi

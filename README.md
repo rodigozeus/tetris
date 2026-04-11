@@ -157,6 +157,19 @@ Senha SSH padrão do Rocknix: `rocknix`
 
 ---
 
+## Rocknix — Downloads e Atualizações
+
+| Tipo | URL |
+|------|-----|
+| Releases estáveis | [github.com/ROCKNIX/distribution/releases](https://github.com/ROCKNIX/distribution/releases) |
+| Nightly builds | [github.com/ROCKNIX/distribution-nightly/releases](https://github.com/ROCKNIX/distribution-nightly/releases) |
+
+Para o RG DS, baixar o arquivo **`ROCKNIX-RK3566.aarch64-<DATA>-Specific.img.gz`**.
+
+> **Nota:** Versões anteriores a ~20260410 não têm suporte ao RG DS. As nightly builds são a única opção para esse console.
+
+---
+
 ## Documentação Técnica
 
 Ver [SETUP.md](SETUP.md) para:
