@@ -64,7 +64,7 @@ local function _is_rg_ds()
   if not f then return false end
   local model = f:read("*a"):lower()
   f:close()
-  return model:find("rg%-ds") ~= nil
+  return model:find("rg ds") ~= nil
 end
 local IS_RG_DS = _is_rg_ds()
 local function map_btn(b)
