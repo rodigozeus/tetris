@@ -1,4 +1,4 @@
--- Snake para Love2D 11.5 / Anbernic RG DS (640x480)
+-- Snake para Love2D 11.5 / Anbernic RG DS e RG 35XX SP (640x480)
 
 local CELL      = 20          -- tamanho de cada célula em pixels
 local COLS      = 32          -- 640 / 20
@@ -29,6 +29,20 @@ local function playSound(src)
   src:seek(0)
   src:play()
 end
+
+-- ─── DETECÇÃO DE DEVICE  (A/B normalization) ─────────────────────────────────
+local IS_RG_DS = false
+local function _detect_js(js)
+  if js:getName():upper():find("RG.DS") then IS_RG_DS = true end
+end
+local function map_btn(b)
+  if IS_RG_DS then
+    if b == "a" then return "b" end
+    if b == "b" then return "a" end
+  end
+  return b
+end
+function love.joystickadded(js) _detect_js(js) end
 
 local SAVE_FILE = "best.txt"
 
@@ -85,6 +99,7 @@ end
 
 function love.load()
   love.math.setRandomSeed(os.time())
+  for _, js in ipairs(love.joystick.getJoysticks()) do _detect_js(js) end
   best  = loadBest()
 
   -- chirp ascendente: 330 → 660 Hz, 0.08 s
@@ -285,6 +300,7 @@ end
 -- ── input (gamepad) ───────────────────────────────────────────────────────────
 
 function love.gamepadpressed(_, button)
+  button = map_btn(button)  -- normaliza A/B entre RG DS e RG 35XX SP
   if button == "dpup"    then tryDir({x = 0, y = -1})
   elseif button == "dpdown"  then tryDir({x = 0, y =  1})
   elseif button == "dpleft"  then tryDir({x = -1, y = 0})
@@ -292,7 +308,7 @@ function love.gamepadpressed(_, button)
   elseif button == "a" or button == "b" then
     if state == "playing" or state == "dying" then
       turbo = true
-    elseif button == "b" and state == "gameover" then
+    elseif button == "a" and state == "gameover" then
       reset()
     end
   elseif button == "start" then
@@ -306,6 +322,7 @@ function love.gamepadpressed(_, button)
 end
 
 function love.gamepadreleased(_, button)
+  button = map_btn(button)
   if button == "a" or button == "b" then
     turbo = false
   end

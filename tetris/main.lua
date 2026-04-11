@@ -1,5 +1,6 @@
 -- Tetris - Love2D
 -- Controles: direcional mover/descer, A/B/cima girar, Start pausar
+-- Dispositivos: Anbernic RG DS (A/B invertidos no driver) e RG 35XX SP (padrão)
 
 local CS      = 22    -- tamanho da célula
 local COLS    = 10
@@ -50,6 +51,22 @@ local CHARS_ROWS = math.ceil(#CHARS / CHARS_PER_ROW)
 local CS_CHAR = 28
 
 -- ─── PERSISTÊNCIA ────────────────────────────────────────────────────────────
+
+-- ─── DETECÇÃO DE DEVICE  (A/B normalization) ─────────────────────────────────
+-- RG DS: driver reporta A/B invertidos (físico A → Love2D "b").
+-- map_btn troca "a"↔"b" no RG DS para normalizar para o padrão.
+local IS_RG_DS = false
+local function _detect_js(js)
+  if js:getName():upper():find("RG.DS") then IS_RG_DS = true end
+end
+local function map_btn(b)
+  if IS_RG_DS then
+    if b == "a" then return "b" end
+    if b == "b" then return "a" end
+  end
+  return b
+end
+function love.joystickadded(js) _detect_js(js) end
 
 local SAVE_FILE = "tetris_data.txt"
 
@@ -625,8 +642,8 @@ function love.textinput(t)
 end
 
 function love.keyreleased(k)   if KEY_MAP[k] then release(KEY_MAP[k]) end end
-function love.gamepadpressed(_,  b) press(b)   end
-function love.gamepadreleased(_, b) release(b) end
+function love.gamepadpressed(_,  b) press(map_btn(b))   end
+function love.gamepadreleased(_, b) release(map_btn(b)) end
 
 -- ─── UPDATE ──────────────────────────────────────────────────────────────────
 
@@ -1120,6 +1137,8 @@ end
 -- ─── LOVE CALLBACKS ──────────────────────────────────────────────────────────
 
 function love.load()
+  for _, js in ipairs(love.joystick.getJoysticks()) do _detect_js(js) end
+
   fnt_big = love.graphics.newFont(42)
   fnt_med = love.graphics.newFont(24)
   fnt_sm  = love.graphics.newFont(18)

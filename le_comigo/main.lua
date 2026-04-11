@@ -1,7 +1,11 @@
 -- Lê Comigo! — Jogo educativo cooperativo de leitura de sílabas
--- Jogadora (criança): Botão A  →  Love2D: "b"
--- Supervisor:         R1       →  "rightshoulder"   |   L1  →  "leftshoulder"
--- Teclado (PC):       Espaço   →  A   |   Seta Dir → R1   |   Seta Esq → L1
+-- Botão A (físico) = confirmar/acertar  →  Love2D "a"  (mapeamento padrão)
+-- Supervisor:  R1  →  "rightshoulder"   |   L1  →  "leftshoulder"
+-- Teclado (PC): Espaço → A  |  Seta Dir → R1  |  Seta Esq → L1
+--
+-- Dispositivos suportados:
+--   Anbernic RG DS     – driver inverte A/B; map_btn normaliza automaticamente
+--   Anbernic RG 35XX SP – mapeamento padrão; sem tela de toque
 
 -- ─────────────────────────────────────────────
 --  SÍLABAS
@@ -350,10 +354,30 @@ local function load_educational_font(size)
 end
 
 -- ─────────────────────────────────────────────
+--  DETECÇÃO DE DEVICE  (A/B normalization)
+-- ─────────────────────────────────────────────
+-- RG DS: driver reporta A/B invertidos (físico A → Love2D "b").
+-- map_btn troca "a"↔"b" no RG DS para que o restante do código
+-- sempre veja "a" = físico A, "b" = físico B.
+local IS_RG_DS = false
+local function _detect_js(js)
+  if js:getName():upper():find("RG.DS") then IS_RG_DS = true end
+end
+local function map_btn(b)
+  if IS_RG_DS then
+    if b == "a" then return "b" end
+    if b == "b" then return "a" end
+  end
+  return b
+end
+function love.joystickadded(js) _detect_js(js) end
+
+-- ─────────────────────────────────────────────
 --  LOVE.LOAD
 -- ─────────────────────────────────────────────
 function love.load()
   love.math.setRandomSeed(os.time())
+  for _, js in ipairs(love.joystick.getJoysticks()) do _detect_js(js) end
 
   font_syl  = load_educational_font(168)
   font_msg  = load_educational_font(44)
@@ -607,11 +631,13 @@ end
 --  LOVE.GAMEPADPRESSED  (console)
 -- ─────────────────────────────────────────────
 function love.gamepadpressed(_, btn)
+  btn = map_btn(btn)  -- normaliza A/B entre RG DS e RG 35XX SP
+
   if state == S_PAUSE then
     if btn == "dpup"   then menu_nav(-1)   end
     if btn == "dpdown" then menu_nav(1)    end
-    if btn == "b"      then menu_confirm() end  -- físico A = confirmar
-    if btn == "a"      then close_pause()  end  -- físico B = voltar ao jogo
+    if btn == "a"      then menu_confirm() end  -- físico A = confirmar
+    if btn == "b"      then close_pause()  end  -- físico B = voltar ao jogo
     if btn == "start"  then close_pause()  end
     return
   end
@@ -621,8 +647,8 @@ function love.gamepadpressed(_, btn)
     if btn == "dpdown" then config_nav(1)    end
     if btn == "dpleft" then config_nav(-1)   end  -- navega opções Sim/Não
     if btn == "dpright"then config_nav(1)    end
-    if btn == "b"      then config_confirm() end  -- físico A = confirmar
-    if btn == "a"      then                       -- físico B = voltar/cancelar
+    if btn == "a"      then config_confirm() end  -- físico A = confirmar
+    if btn == "b"      then                       -- físico B = voltar/cancelar
       if reset_confirm then reset_confirm = false
       else close_config() end
     end
@@ -633,14 +659,14 @@ function love.gamepadpressed(_, btn)
   if state == S_SILABAS then
     if btn == "dpup"   then silabas_nav(-1)   end
     if btn == "dpdown" then silabas_nav(1)    end
-    if btn == "b"      then silabas_confirm() end  -- físico A = confirmar/marcar
-    if btn == "a"      then close_silabas()   end  -- físico B = voltar p/ config
+    if btn == "a"      then silabas_confirm() end  -- físico A = confirmar/marcar
+    if btn == "b"      then close_silabas()   end  -- físico B = voltar p/ config
     if btn == "start"  then close_silabas()   end
     return
   end
 
-  if btn == "b" or btn == "rightshoulder" or btn == "dpup"   or btn == "dpright" then action_correct() end  -- A físico / R1 / D↑ / D→
-  if btn == "a" or btn == "leftshoulder"  or btn == "dpdown" or btn == "dpleft"  then action_wrong()   end  -- B físico / L1 / D↓ / D←
+  if btn == "a" or btn == "rightshoulder" or btn == "dpup"   or btn == "dpright" then action_correct() end  -- A físico / R1 / D↑ / D→
+  if btn == "b" or btn == "leftshoulder"  or btn == "dpdown" or btn == "dpleft"  then action_wrong()   end  -- B físico / L1 / D↓ / D←
   if btn == "start"                                          then open_pause()     end
 end
 
