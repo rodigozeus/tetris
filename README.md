@@ -69,30 +69,6 @@ Pensado para ser jogado **em dupla**: a criança lê a sílaba em voz alta, o ad
 
 ---
 
-### Picross
-> Nonograma com revelação progressiva de imagem em dual screen.
-
-- **Tela superior** mostra a imagem que vai sendo revelada conforme você acerta células
-- **Tela inferior** exibe a grade com dicas de linhas e colunas — interação por touch
-- Dicas ficam **verdes** quando a linha ou coluna está corretamente resolvida
-- Dois modos de marcação selecionáveis por botão: **Preencher** e **Marcar X**
-- Arrastar o dedo preenche/apaga várias células de uma vez
-- Puzzles em arquivos `.lua` individuais na pasta `puzzles/` — adicionar novos não requer alterar o código
-
-**Controles:** Touch na tela inferior · Start: próximo puzzle · Select: sair
-
----
-
-### Touch Test
-> Utilitário para validar o funcionamento das duas telas e do touch.
-
-- Janela de **1280×480** cobrindo DSI-2 (tela de cima) e DSI-1 (tela de baixo)
-- Dois botões interativos, um em cada tela — mudam de cor ao toque
-- Exibe as coordenadas brutas do toque em tempo real
-- Usa Wayland (swaymsg) para ligar DSI-1 e posicionar a janela em (0, 0)
-
----
-
 ### Update
 > Atualizador de jogos direto do console, em dual screen.
 
@@ -110,19 +86,14 @@ games/
 ├── snake/          main.lua + conf.lua
 ├── tetris/         main.lua + conf.lua
 ├── le_comigo/      main.lua + conf.lua
-├── touchtest/      main.lua + conf.lua
 ├── update/         main.lua + conf.lua
-├── picross/        main.lua + conf.lua
-│   └── puzzles/    ← arquivos .lua com os puzzles (um por arquivo)
 ├── roms/           ← ROMs organizadas por sistema (nds/, snes/, ...)
 ├── saves/          ← Backup dos saves flat (.dsv, .sav, .srm)
 ├── releases/       ← Imagens do Rocknix (.img.gz)
 ├── Snake.sh        ← script de lançamento no console
 ├── Tetris.sh
 ├── LeComigo.sh
-├── TouchTest.sh
 ├── Update.sh
-├── Picross.sh
 ├── SETUP.md        ← documentação técnica completa do ambiente
 └── instala_emmc.md ← guia de instalação do Rocknix na eMMC interna
 ```
@@ -139,15 +110,15 @@ LD_LIBRARY_PATH=/storage/roms/ports/moonlightnew/libs \
   /storage/roms/ports/moonlightnew/love \
   /storage/roms/ports/snake
 
-# Jogo dual screen (TouchTest)
+# Jogo dual screen
 swaymsg 'output DSI-1 power on'
 SDL_VIDEODRIVER=wayland \
 LD_LIBRARY_PATH=/storage/roms/ports/moonlightnew/libs \
   /storage/roms/ports/moonlightnew/love \
-  /storage/roms/ports/touchtest &
+  /storage/roms/ports/update &
 LOVE_PID=$!
 sleep 1
-swaymsg '[title="Touch Test"] floating enable, border none, move absolute position 0 0'
+swaymsg '[title="Update"] floating enable, border none, move absolute position 0 0'
 wait $LOVE_PID
 swaymsg 'output DSI-1 power off'
 ```

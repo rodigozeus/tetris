@@ -206,9 +206,7 @@ end
 |------|-------|--------|-----------|
 | Tetris     | `tetris/`     | `Tetris.sh`     | Tetris clássico com níveis e score |
 | Snake      | `snake/`      | `Snake.sh`      | Snake com velocidade progressiva e recorde persistente |
-| TouchTest  | `touchtest/`  | `TouchTest.sh`  | Teste de dual screen + touch nas duas telas |
 | Lê Comigo  | `le_comigo/`  | `LeComigo.sh`   | Jogo educativo cooperativo de leitura de sílabas |
-| Picross    | `picross/`    | `Picross.sh`    | Picross com revelação de imagem na tela superior e grade interativa na inferior (dual screen) |
 | Update     | `update/`     | `Update.sh`     | Utilitário de atualização de jogos baixando o repositório do GitHub (dual screen) |
 
 ---
