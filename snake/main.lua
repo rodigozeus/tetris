@@ -31,10 +31,14 @@ local function playSound(src)
 end
 
 -- ─── DETECÇÃO DE DEVICE  (A/B normalization) ─────────────────────────────────
-local IS_RG_DS = false
-local function _detect_js(js)
-  if js:getName():upper():find("RG.DS") then IS_RG_DS = true end
+local function _is_rg_ds()
+  local f = io.open("/proc/device-tree/model", "r")
+  if not f then return false end
+  local model = f:read("*a"):lower()
+  f:close()
+  return model:find("rg%-ds") ~= nil
 end
+local IS_RG_DS = _is_rg_ds()
 local function map_btn(b)
   if IS_RG_DS then
     if b == "a" then return "b" end
@@ -42,7 +46,6 @@ local function map_btn(b)
   end
   return b
 end
-function love.joystickadded(js) _detect_js(js) end
 
 local SAVE_FILE = "best.txt"
 
@@ -99,7 +102,6 @@ end
 
 function love.load()
   love.math.setRandomSeed(os.time())
-  for _, js in ipairs(love.joystick.getJoysticks()) do _detect_js(js) end
   best  = loadBest()
 
   -- chirp ascendente: 330 → 660 Hz, 0.08 s

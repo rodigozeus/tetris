@@ -356,13 +356,20 @@ end
 -- ─────────────────────────────────────────────
 --  DETECÇÃO DE DEVICE  (A/B normalization)
 -- ─────────────────────────────────────────────
--- RG DS: driver reporta A/B invertidos (físico A → Love2D "b").
--- map_btn troca "a"↔"b" no RG DS para que o restante do código
--- sempre veja "a" = físico A, "b" = físico B.
-local IS_RG_DS = false
-local function _detect_js(js)
-  if js:getName():upper():find("RG.DS") then IS_RG_DS = true end
+-- Ambos os devices reportam o joystick como "retrogame_joypad".
+-- Diferenciamos pelo modelo de hardware em /proc/device-tree/model:
+--   RG DS      → contém "rg-ds"  (A/B invertidos no driver)
+--   RG 35XX SP → contém "rg35xx" (mapeamento padrão)
+-- map_btn troca "a"↔"b" no RG DS para que o código veja sempre
+-- "a" = físico A, "b" = físico B.
+local function _is_rg_ds()
+  local f = io.open("/proc/device-tree/model", "r")
+  if not f then return false end
+  local model = f:read("*a"):lower()
+  f:close()
+  return model:find("rg%-ds") ~= nil
 end
+local IS_RG_DS = _is_rg_ds()
 local function map_btn(b)
   if IS_RG_DS then
     if b == "a" then return "b" end
@@ -370,14 +377,12 @@ local function map_btn(b)
   end
   return b
 end
-function love.joystickadded(js) _detect_js(js) end
 
 -- ─────────────────────────────────────────────
 --  LOVE.LOAD
 -- ─────────────────────────────────────────────
 function love.load()
   love.math.setRandomSeed(os.time())
-  for _, js in ipairs(love.joystick.getJoysticks()) do _detect_js(js) end
 
   font_syl  = load_educational_font(168)
   font_msg  = load_educational_font(44)
