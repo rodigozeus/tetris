@@ -1,7 +1,10 @@
 -- Atualizador de Jogos
--- Painel de progresso espelhado nas duas telas (RG DS) ou tela única (RG 35XX SP)
+-- Tela esquerda (DSI-2, x 0..639):   painel de progresso
+-- Tela direita  (DSI-1, x 640..1279): terminal de instalação
+-- No RG 35XX SP (tela única) apenas a tela esquerda é visível.
 
-local W, H = 640, 480
+local W, H  = 640, 480
+local OX    = 640   -- offset X da tela direita (terminal)
 
 local REPO_URL = "https://github.com/rodigozeus/tetris/archive/refs/heads/master.zip"
 local TMP_ZIP  = "/tmp/tetris_update.zip"
@@ -19,6 +22,16 @@ local C = {
   accent   = {0.45, 0.82, 1.00},
 }
 
+local TC = {
+  bg      = {0.00, 0.00, 0.00},
+  header  = {0.08, 0.08, 0.08},
+  htext   = {0.45, 0.82, 1.00},
+  cmd     = {0.28, 1.00, 0.45},
+  section = {1.00, 0.88, 0.28},
+  text    = {0.90, 0.90, 0.90},
+  sep     = {0.15, 0.15, 0.15},
+}
+
 local STEPS = {
   { label = "Conectando ao servidor", key = "connecting"  },
   { label = "Baixando atualização",   key = "downloading" },
@@ -33,12 +46,20 @@ local error_msg     = ""
 local spinner_t     = 0
 local fade_alpha    = 0
 local done_timer    = 0
+local cursor_blink  = 0
 local AUTO_CLOSE    = 5
 local startup_timer = 0
 local STARTUP_DELAY = 0.3
 
-local font_title, font_label, font_small
-local worker_thread, channel
+local font_title, font_label, font_small, font_term
+local worker_thread, channel, log_channel
+
+local terminal_lines = {}
+local MAX_LOG        = 300
+local TERM_LINE_H    = 14
+local TERM_HEADER_H  = 26
+local TERM_PAD_X     = 8
+local TERM_PAD_Y     = 6
 
 -- ── worker thread ──────────────────────────────────────────────────────────────
 local WORKER = string.format([[
@@ -46,10 +67,25 @@ local WORKER = string.format([[
   local TMP_ZIP  = %q
   local TMP_DIR  = %q
   local PORTS    = %q
-  local ch = love.thread.getChannel("progress")
+  local ch     = love.thread.getChannel("progress")
+  local log_ch = love.thread.getChannel("log")
 
-  local function run(cmd)
-    os.execute(cmd .. " > /dev/null 2>&1")
+  local function log(line) log_ch:push(tostring(line)) end
+
+  local function exec(cmd)
+    log("$ " .. cmd)
+    local h = io.popen(cmd .. " 2>&1")
+    if h then
+      for line in h:lines() do
+        if line:match("%%S") then log("  " .. line) end
+      end
+      h:close()
+    end
+  end
+
+  local function silent(cmd)
+    log("$ " .. cmd)
+    os.execute(cmd)
   end
 
   local function file_exists(path)
@@ -62,28 +98,40 @@ local WORKER = string.format([[
     return ok == 0 or ok == true
   end
 
+  log(">> Iniciando atualização")
+  log("")
+
   ch:push("downloading")
-  run("wget --no-verbose '" .. REPO_URL .. "' -O '" .. TMP_ZIP .. "'")
+  log(">> Baixando pacote")
+  exec("wget --no-verbose '" .. REPO_URL .. "' -O '" .. TMP_ZIP .. "'")
   if not file_exists(TMP_ZIP) then
     ch:push("error:Falha ao baixar. Verifique a conexão.")
     return
   end
+  log("")
 
   ch:push("extracting")
-  run("rm -rf '" .. TMP_DIR .. "'")
-  run("mkdir -p '" .. TMP_DIR .. "'")
-  run("unzip '" .. TMP_ZIP .. "' -d '" .. TMP_DIR .. "'")
+  log(">> Extraindo arquivos")
+  silent("rm -rf '" .. TMP_DIR .. "'")
+  silent("mkdir -p '" .. TMP_DIR .. "'")
+  exec("unzip '" .. TMP_ZIP .. "' -d '" .. TMP_DIR .. "'")
   if not dir_exists(TMP_DIR .. "/tetris-master") then
     ch:push("error:Falha ao extrair o arquivo.")
     return
   end
+  log("")
 
   ch:push("installing")
-  run("cp -rv '" .. TMP_DIR .. "/tetris-master/.' '" .. PORTS .. "/'")
+  log(">> Instalando arquivos em " .. PORTS)
+  exec("cp -rv '" .. TMP_DIR .. "/tetris-master/.' '" .. PORTS .. "/'")
+  log("")
 
   ch:push("cleanup")
-  run("rm -rf '" .. TMP_ZIP .. "' '" .. TMP_DIR .. "'")
+  log(">> Limpando arquivos temporários")
+  silent("rm -rf '" .. TMP_ZIP .. "' '" .. TMP_DIR .. "'")
+  log("")
 
+  log(">> Concluído!")
   ch:push("done")
 ]], REPO_URL, TMP_ZIP, TMP_DIR, PORTS)
 
@@ -94,13 +142,25 @@ local function step_index(key)
   end
 end
 
+local function push_log(raw)
+  local kind
+  if     raw:sub(1,2) == "$ "  then kind = "cmd"
+  elseif raw:sub(1,2) == ">>"  then kind = "section"
+  else                               kind = "out"
+  end
+  table.insert(terminal_lines, { text = raw, kind = kind })
+  if #terminal_lines > MAX_LOG then table.remove(terminal_lines, 1) end
+end
+
 -- ── love callbacks ─────────────────────────────────────────────────────────────
 function love.load()
   font_title = love.graphics.newFont(30)
   font_label = love.graphics.newFont(18)
   font_small = love.graphics.newFont(13)
+  font_term  = love.graphics.newFont(11)
 
   channel       = love.thread.getChannel("progress")
+  log_channel   = love.thread.getChannel("log")
   worker_thread = love.thread.newThread(WORKER)
   worker_thread:start()
 end
@@ -109,21 +169,28 @@ function love.update(dt)
   startup_timer = startup_timer + dt
   if startup_timer < STARTUP_DELAY then return end
 
-  fade_alpha = math.min(1, fade_alpha + dt * 2.5)
-  spinner_t  = spinner_t + dt
+  fade_alpha   = math.min(1, fade_alpha + dt * 2.5)
+  spinner_t    = spinner_t + dt
+  cursor_blink = cursor_blink + dt
 
   local msg = channel:pop()
   if msg then
     if msg == "done" then
       current_step = #STEPS + 1
       status = "done"
-    elseif msg:sub(1, 5) == "error" then
+    elseif msg:sub(1,5) == "error" then
       status    = "error"
       error_msg = msg:sub(7)
     else
       local idx = step_index(msg)
       if idx then current_step = idx end
     end
+  end
+
+  while true do
+    local line = log_channel:pop()
+    if not line then break end
+    push_log(line)
   end
 
   if status ~= "done" and not worker_thread:isRunning() then
@@ -176,37 +243,30 @@ local function draw_dot_outline(x, y)
   love.graphics.circle("line", x, y, 7)
 end
 
--- Desenha o painel de progresso na posição atual (chamado com translate ativo)
-local function draw_panel()
+local function draw_progress_panel()
   local ix = 200
   local lx = 228
   local sy = 138
   local sg = 50
 
-  -- fundo
   love.graphics.setColor(C.bg[1], C.bg[2], C.bg[3])
   love.graphics.rectangle("fill", 0, 0, W, H)
 
-  -- linha superior
   col(C.accent, 0.5)
   love.graphics.setLineWidth(1.5)
   love.graphics.line(60, 56, W - 60, 56)
 
-  -- título
   love.graphics.setFont(font_title)
   col(C.title)
   love.graphics.printf("ATUALIZAR JOGOS", 0, 18, W, "center")
 
-  -- subtítulo
   love.graphics.setFont(font_small)
   col(C.subtitle)
   love.graphics.printf("github.com/rodigozeus/tetris", 0, 64, W, "center")
 
-  -- separador decorativo
   col(C.accent, 0.12)
   love.graphics.rectangle("fill", 60, 78, W - 120, 1)
 
-  -- steps
   for i, step in ipairs(STEPS) do
     local y  = sy + (i - 1) * sg
     local iy = y + 10
@@ -215,39 +275,27 @@ local function draw_panel()
     local is_done    = (i < current_step) or (status == "done")
 
     if is_error then
-      draw_cross(ix, iy)
-      love.graphics.setFont(font_label)
-      col(C.error_c)
+      draw_cross(ix, iy); love.graphics.setFont(font_label); col(C.error_c)
     elseif is_done then
-      draw_check(ix, iy)
-      love.graphics.setFont(font_label)
-      col(C.done)
+      draw_check(ix, iy); love.graphics.setFont(font_label); col(C.done)
     elseif is_current then
-      draw_spinner(ix, iy, spinner_t)
-      love.graphics.setFont(font_label)
-      col(C.current)
+      draw_spinner(ix, iy, spinner_t); love.graphics.setFont(font_label); col(C.current)
     else
-      draw_dot_outline(ix, iy)
-      love.graphics.setFont(font_label)
-      col(C.pending)
+      draw_dot_outline(ix, iy); love.graphics.setFont(font_label); col(C.pending)
     end
-
     love.graphics.print(step.label, lx, y)
   end
 
-  -- linha inferior
   col(C.accent, 0.25)
   love.graphics.setLineWidth(1)
   love.graphics.line(60, 440, W - 60, 440)
 
-  -- rodapé
   love.graphics.setFont(font_small)
   if status == "done" then
     col(C.done)
     love.graphics.printf(
       "Concluído! Fechando em " .. math.ceil(AUTO_CLOSE - done_timer) .. "s...",
-      0, 450, W, "center"
-    )
+      0, 450, W, "center")
   elseif status == "error" then
     col(C.error_c)
     love.graphics.printf(error_msg, 0, 444, W, "center")
@@ -258,9 +306,77 @@ local function draw_panel()
     love.graphics.printf("Aguarde...", 0, 450, W, "center")
   end
 
-  -- crédito
   col(C.subtitle, 0.25)
   love.graphics.printf("Anbernic  ·  Rocknix", 0, 468, W, "center")
+end
+
+local function draw_terminal()
+  local tx            = OX
+  local available_h   = H - TERM_HEADER_H - TERM_PAD_Y * 2
+  local max_visible   = math.floor(available_h / TERM_LINE_H)
+
+  love.graphics.setColor(TC.bg[1], TC.bg[2], TC.bg[3])
+  love.graphics.rectangle("fill", tx, 0, W, H)
+
+  love.graphics.setColor(TC.header[1], TC.header[2], TC.header[3])
+  love.graphics.rectangle("fill", tx, 0, W, TERM_HEADER_H)
+
+  love.graphics.setFont(font_small)
+  love.graphics.setColor(TC.htext[1], TC.htext[2], TC.htext[3])
+  love.graphics.print("TERMINAL", tx + TERM_PAD_X, 6)
+
+  local status_label
+  if status == "done" then
+    love.graphics.setColor(TC.cmd[1], TC.cmd[2], TC.cmd[3])
+    status_label = "[ concluído ]"
+  elseif status == "error" then
+    love.graphics.setColor(1, 0.28, 0.28)
+    status_label = "[ erro ]"
+  else
+    if math.floor(cursor_blink * 2) % 2 == 0 then
+      love.graphics.setColor(TC.cmd[1], TC.cmd[2], TC.cmd[3])
+    else
+      love.graphics.setColor(0.3, 0.3, 0.3)
+    end
+    status_label = "[ executando ]"
+  end
+  love.graphics.printf(status_label, tx, 6, W - TERM_PAD_X, "right")
+
+  love.graphics.setColor(TC.sep[1], TC.sep[2], TC.sep[3])
+  love.graphics.setLineWidth(1)
+  love.graphics.line(tx, TERM_HEADER_H, tx + W, TERM_HEADER_H)
+
+  love.graphics.setScissor(tx, TERM_HEADER_H, W, H - TERM_HEADER_H)
+  love.graphics.setFont(font_term)
+
+  local start_i = math.max(1, #terminal_lines - max_visible + 1)
+  for i = start_i, #terminal_lines do
+    local entry = terminal_lines[i]
+    local row   = i - start_i
+    local lx    = tx + TERM_PAD_X
+    local ly    = TERM_HEADER_H + TERM_PAD_Y + row * TERM_LINE_H
+
+    if     entry.kind == "cmd"     then love.graphics.setColor(TC.cmd[1],     TC.cmd[2],     TC.cmd[3])
+    elseif entry.kind == "section" then love.graphics.setColor(TC.section[1], TC.section[2], TC.section[3])
+    else                                love.graphics.setColor(TC.text[1],    TC.text[2],    TC.text[3])
+    end
+    love.graphics.print(entry.text, lx, ly)
+  end
+
+  if status == "running" then
+    local last_row = math.min(#terminal_lines, max_visible)
+    local cy = TERM_HEADER_H + TERM_PAD_Y + last_row * TERM_LINE_H + 1
+    if math.floor(cursor_blink * 2) % 2 == 0 then
+      love.graphics.setColor(1, 1, 1)
+      love.graphics.rectangle("fill", tx + TERM_PAD_X, cy, 7, 2)
+    end
+  end
+
+  love.graphics.setScissor()
+
+  love.graphics.setColor(TC.sep[1], TC.sep[2], TC.sep[3])
+  love.graphics.setLineWidth(1)
+  love.graphics.line(tx, 0, tx, H)
 end
 
 function love.draw()
@@ -268,15 +384,8 @@ function love.draw()
     love.graphics.clear(0, 0, 0)
     return
   end
-
-  -- tela principal (DSI-2 no RG DS, tela única no RG 35XX SP)
-  draw_panel()
-
-  -- tela de baixo espelhada (DSI-1 no RG DS)
-  love.graphics.push()
-  love.graphics.translate(W, 0)
-  draw_panel()
-  love.graphics.pop()
+  draw_progress_panel()
+  draw_terminal()
 end
 
 function love.gamepadpressed()
