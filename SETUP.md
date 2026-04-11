@@ -19,6 +19,31 @@ Desenvolvemos jogos em **Love2D (Lua)** para rodar em um **Anbernic RG DS** com 
 
 ---
 
+## Armazenamento
+
+O Rocknix está instalado na **eMMC interna** (~29GB). O SD card é dedicado exclusivamente a ROMs e saves, formatado em **FAT32** para acesso direto pelo Windows.
+
+| Dispositivo | Conteúdo | Filesystem |
+|-------------|----------|------------|
+| eMMC (`/dev/mmcblk0`) | Sistema Rocknix | ext4 |
+| SD card (`/dev/mmcblk1`) | ROMs, saves, configs | FAT32 |
+
+O Rocknix auto-monta o SD card em `/storage/` na inicialização. Estrutura esperada na raiz do SD:
+
+```
+SD:/
+├── roms/
+│   ├── nds/      ← ROMs de NDS
+│   └── snes/     ← ROMs de SNES
+└── saves/        ← Saves flat (sem subpastas), ex: "Mario Kart DS.dsv"
+```
+
+Para adicionar ROMs: conectar o SD no PC e copiar para a pasta do sistema correspondente. Para adicionar saves: copiar os arquivos `.dsv` / `.sav` / `.srm` diretamente para `saves/`.
+
+Ver [instala_emmc.md](instala_emmc.md) para detalhes da instalação na eMMC.
+
+---
+
 ## Love2D no Console
 
 O binário do Love2D **já está instalado** no console, instalado como dependência do port "moonlightnew":

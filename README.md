@@ -9,10 +9,11 @@ Jogos feitos em **Love2D (Lua)**, rodando num **Anbernic RG DS** com **Rocknix**
 | | |
 |---|---|
 | **Hardware** | Anbernic RG DS |
-| **Sistema** | Rocknix (Linux aarch64) |
+| **Sistema** | Rocknix (Linux aarch64) na eMMC interna |
 | **Telas** | Dual screen — 2× 640×480 |
 | **Engine** | Love2D 11.5 |
 | **Acesso** | SSH / SCP via rede local |
+| **SD card** | FAT32 — exclusivo para ROMs e saves |
 
 ---
 
@@ -113,13 +114,17 @@ games/
 ├── update/         main.lua + conf.lua
 ├── picross/        main.lua + conf.lua
 │   └── puzzles/    ← arquivos .lua com os puzzles (um por arquivo)
+├── roms/           ← ROMs organizadas por sistema (nds/, snes/, ...)
+├── saves/          ← Backup dos saves flat (.dsv, .sav, .srm)
+├── releases/       ← Imagens do Rocknix (.img.gz)
 ├── Snake.sh        ← script de lançamento no console
 ├── Tetris.sh
 ├── LeComigo.sh
 ├── TouchTest.sh
 ├── Update.sh
 ├── Picross.sh
-└── SETUP.md        ← documentação técnica completa do ambiente
+├── SETUP.md        ← documentação técnica completa do ambiente
+└── instala_emmc.md ← guia de instalação do Rocknix na eMMC interna
 ```
 
 ---

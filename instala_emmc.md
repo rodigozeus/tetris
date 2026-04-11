@@ -52,22 +52,13 @@ Existe em `/usr/bin/installtointernal` mas **não é compatível com RK3566** �
 
 ## Métodos disponíveis
 
-### Método A — USB Mass Storage (preferido, mais seguro)
+### Método A — USB Mass Storage ❌ Não funciona no RG DS
 
-Informação da comunidade: alguns dispositivos RK3566 da Anbernic permitem entrar em modo de armazenamento em massa via USB.
-
-**Procedimento:**
-1. Desligar o console
-2. Conectar USB ao PC (porta DC/OTG)
-3. Ligar segurando **Volume -**
-4. Se aparecer como disco no Windows → usar **Balena Etcher** para gravar a imagem
-5. Reiniciar segurando **Volume +**
-
-**Status:** ainda não testado no RG DS — primeiro passo a tentar.
+Testado: ao segurar Volume - e conectar USB, o console entrou em **modo Loader/Maskrom** (LED laranja), mas não aparece como disco no Windows. Precisaria do **Rockchip DriverAssistant** + **RKDevTool** — caminho complexo, abandonado.
 
 ---
 
-### Método B — dd via SSH (plano B)
+### Método B — dd via SSH ✅ CONCLUÍDO COM SUCESSO
 
 Rodar enquanto Rocknix está ativo no SD card.
 
@@ -92,7 +83,17 @@ gunzip -c /storage/ROCKNIX-RK3566*.img.gz | dd skip=64 bs=512 count=960 of=/dev/
 gunzip -c /storage/ROCKNIX-RK3566*.img.gz | dd of=/dev/mmcblk0 bs=4M status=progress
 ```
 
-**Passo 4 — Reiniciar sem o SD card.**
+**Passo 4 — Montar a partição de boot da eMMC e corrigir o extlinux.conf:**
+```bash
+mkdir /tmp/emmc_boot
+mount /dev/mmcblk0p1 /tmp/emmc_boot
+sed -i 's/rk3566-powkiddy-x55.dtb/rk3568-anbernic-rg-ds.dtb/' /tmp/emmc_boot/extlinux/extlinux.conf
+umount /tmp/emmc_boot
+```
+
+> ⚠️ **Problema encontrado:** a imagem Specific vinha com o DTB errado (`rk3566-powkiddy-x55.dtb` ao invés de `rk3568-anbernic-rg-ds.dtb`). Sem essa correção o console não boota pela eMMC.
+
+**Passo 5 — Reiniciar sem o SD card.**
 
 > ⚠️ O Passo 2 (gravar no boot0) é importante para substituir o bootloader do Android pelo do Rocknix, garantindo que o U-Boot do Rocknix seja carregado — e ele tem fallback para SD se a eMMC falhar.
 
@@ -108,15 +109,35 @@ Usar sempre a versão **Specific** (tem suporte específico ao RG DS).
 
 ---
 
-## Resultado esperado
+## Resultado
 
-- Rocknix rodando da eMMC interna
-- SD card usado só para ROMs
-- Boot mais rápido
-- Slot de SD livre para um cartão de alta capacidade dedicado a ROMs
+✅ **Concluído em 2026-04-11.**
+
+- Rocknix rodando da eMMC interna (~29GB)
+- Boot visivelmente mais rápido
+- SD card formatado em **FAT32** dedicado exclusivamente a ROMs e saves
+- Rocknix auto-monta o SD card em `/storage/` — ROMs e saves ficam acessíveis automaticamente
 
 ---
 
-## Próximo passo
+## Estrutura de armazenamento final
 
-Testar o **Método A** (USB Mass Storage, Volume -) antes de qualquer coisa.
+| Caminho | Onde fica | Filesystem |
+|---------|-----------|------------|
+| Sistema (Rocknix) | eMMC (`/dev/mmcblk0`) | ext4 |
+| `/storage/roms/` | SD card | FAT32 |
+| `/storage/saves/` | SD card | FAT32 |
+| `/storage/.config/` | SD card | FAT32 |
+
+> O Rocknix monta o SD card diretamente em `/storage/`, sobrepondo o diretório da eMMC.
+
+---
+
+## Organização dos saves no PC (backup)
+
+Saves ficam em `games/saves/` — flat, sem subpastas. O RetroArch busca por nome de arquivo.
+
+Para copiar saves das ROMs pra pasta correta no PC:
+```bash
+find games/roms \( -name "*.dsv" -o -name "*.sav" -o -name "*.srm" \) -exec cp {} games/saves/ \;
+```
