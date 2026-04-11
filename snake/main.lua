@@ -286,6 +286,11 @@ end
 -- ── helper de direção ────────────────────────────────────────────────────────
 
 local function tryDir(d)
+  -- pressionar a direção atual ativa turbo
+  if d.x == dir.x and d.y == dir.y then
+    if state == "playing" or state == "dying" then turbo = true end
+    return
+  end
   nextDir = d
   if state == "dying" then
     -- ignora reversão de 180°
@@ -299,19 +304,37 @@ local function tryDir(d)
   end
 end
 
+-- retorna a direção associada a um botão de gamepad (após map_btn)
+local function btnToDir(button)
+  if button == "dpup"    or button == "x" then return {x = 0,  y = -1} end
+  if button == "dpdown"  or button == "b" then return {x = 0,  y =  1} end
+  if button == "dpleft"  or button == "y" then return {x = -1, y =  0} end
+  if button == "dpright" or button == "a" then return {x =  1, y =  0} end
+end
+
+-- retorna a direção associada a uma tecla direcional
+local function keyToDir(key)
+  if key == "up"    or key == "w" then return {x = 0,  y = -1} end
+  if key == "down"  or key == "s" then return {x = 0,  y =  1} end
+  if key == "left"  or key == "a" then return {x = -1, y =  0} end
+  if key == "right" or key == "d" then return {x =  1, y =  0} end
+end
+
 -- ── input (gamepad) ───────────────────────────────────────────────────────────
 
 function love.gamepadpressed(_, button)
   button = map_btn(button)  -- normaliza A/B entre RG DS e RG 35XX SP
-  if button == "dpup"    then tryDir({x = 0, y = -1})
-  elseif button == "dpdown"  then tryDir({x = 0, y =  1})
-  elseif button == "dpleft"  then tryDir({x = -1, y = 0})
-  elseif button == "dpright" then tryDir({x =  1, y = 0})
-  elseif button == "a" or button == "b" then
+  if button == "dpup"    or button == "x" then tryDir({x = 0, y = -1})
+  elseif button == "dpdown"  or button == "b" then
+    if state == "gameover" then reset()
+    else tryDir({x = 0, y = 1}) end
+  elseif button == "dpleft"  or button == "y" then tryDir({x = -1, y = 0})
+  elseif button == "dpright" or button == "a" then
+    if state == "gameover" then reset()
+    else tryDir({x = 1, y = 0}) end
+  elseif button == "leftshoulder" or button == "rightshoulder" then
     if state == "playing" or state == "dying" then
       turbo = true
-    elseif button == "a" and state == "gameover" then
-      reset()
     end
   elseif button == "start" then
     if state == "playing"  then state = "paused";  playSound(snd_pause)
@@ -325,8 +348,23 @@ end
 
 function love.gamepadreleased(_, button)
   button = map_btn(button)
-  if button == "a" or button == "b" then
+  if button == "leftshoulder" or button == "rightshoulder" then
     turbo = false
+  else
+    local d = btnToDir(button)
+    if d and d.x == dir.x and d.y == dir.y then turbo = false end
+  end
+end
+
+-- ── L2 / R2 chegam como eixo analógico ───────────────────────────────────────
+
+function love.gamepadaxis(_, axis, value)
+  if axis == "triggerleft" or axis == "triggerright" then
+    if value > 0.5 then
+      if state == "playing" or state == "dying" then turbo = true end
+    else
+      turbo = false
+    end
   end
 end
 
@@ -356,5 +394,8 @@ end
 function love.keyreleased(key)
   if key == "z" or key == "x" then
     turbo = false
+  else
+    local d = keyToDir(key)
+    if d and d.x == dir.x and d.y == dir.y then turbo = false end
   end
 end
