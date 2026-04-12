@@ -1,5 +1,4 @@
 #!/bin/bash
-sleep 2
 swaymsg 'output DSI-1 power on' 2>/dev/null
 
 SDL_VIDEODRIVER=wayland \

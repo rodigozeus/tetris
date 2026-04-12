@@ -49,7 +49,8 @@ local done_timer    = 0
 local cursor_blink  = 0
 local AUTO_CLOSE    = 5
 local startup_timer = 0
-local STARTUP_DELAY = 0.3
+local STARTUP_DELAY = 2.0
+local worker_started = false
 
 local font_title, font_label, font_small, font_term
 local worker_thread, channel, log_channel
@@ -162,12 +163,16 @@ function love.load()
   channel       = love.thread.getChannel("progress")
   log_channel   = love.thread.getChannel("log")
   worker_thread = love.thread.newThread(WORKER)
-  worker_thread:start()
 end
 
 function love.update(dt)
   startup_timer = startup_timer + dt
   if startup_timer < STARTUP_DELAY then return end
+
+  if not worker_started then
+    worker_started = true
+    worker_thread:start()
+  end
 
   fade_alpha   = math.min(1, fade_alpha + dt * 2.5)
   spinner_t    = spinner_t + dt
@@ -379,9 +384,35 @@ local function draw_terminal()
   love.graphics.line(tx, 0, tx, H)
 end
 
+local function draw_startup()
+  love.graphics.setColor(C.bg[1], C.bg[2], C.bg[3])
+  love.graphics.rectangle("fill", 0, 0, W, H)
+
+  love.graphics.setColor(C.accent[1], C.accent[2], C.accent[3], 0.5)
+  love.graphics.setLineWidth(1.5)
+  love.graphics.line(60, 56, W - 60, 56)
+
+  love.graphics.setFont(font_title)
+  love.graphics.setColor(C.title[1], C.title[2], C.title[3])
+  love.graphics.printf("ATUALIZAR JOGOS", 0, 18, W, "center")
+
+  love.graphics.setFont(font_small)
+  love.graphics.setColor(C.subtitle[1], C.subtitle[2], C.subtitle[3])
+  love.graphics.printf("github.com/rodigozeus/tetris", 0, 64, W, "center")
+
+  local dots = string.rep(".", math.floor(startup_timer * 3) % 4)
+  love.graphics.setFont(font_label)
+  love.graphics.setColor(C.current[1], C.current[2], C.current[3])
+  love.graphics.printf("Aguardando sistema" .. dots, 0, H / 2 - 12, W, "center")
+
+  love.graphics.setFont(font_small)
+  love.graphics.setColor(C.subtitle[1], C.subtitle[2], C.subtitle[3], 0.25)
+  love.graphics.printf("Anbernic  ·  Rocknix", 0, 468, W, "center")
+end
+
 function love.draw()
   if startup_timer < STARTUP_DELAY then
-    love.graphics.clear(0, 0, 0)
+    draw_startup()
     return
   end
   draw_progress_panel()
