@@ -49,7 +49,7 @@ local done_timer    = 0
 local cursor_blink  = 0
 local AUTO_CLOSE    = 5
 local startup_timer = 0
-local STARTUP_DELAY = 2.0
+local STARTUP_DELAY = 1.0
 local worker_started = false
 
 local font_title, font_label, font_small, font_term
