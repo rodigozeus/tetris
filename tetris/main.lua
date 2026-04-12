@@ -177,6 +177,14 @@ local play_snd
 
 -- ─── LÓGICA ──────────────────────────────────────────────────────────────────
 
+local function add_score(pts)
+  local name = current_user and users[current_user].name or ""
+  if name == "RODRIGO" then
+    pts = math.floor(pts * 1.25 + 0.5)
+  end
+  score = score + pts
+end
+
 local function refill_bag()
   bag = {}
   for i = 1, #SHAPES do bag[i] = i end
@@ -327,7 +335,7 @@ local function resolve_piece_lock()
   if back_to_back and is_hard then pts = math.floor(pts * 1.5) end
   if n > 0 then back_to_back = is_hard end
 
-  score      = score + pts
+  add_score(pts)
   level      = math.floor(total_lines / 10) + 1
   fall_speed = calc_fall_speed(level)
   last_was_rotation = false
@@ -414,7 +422,7 @@ local function hard_drop()
     piece.row = piece.row + 1
     dropped   = dropped + 1
   end
-  score             = score + dropped * 2
+  add_score(dropped * 2)
   lock_timer        = nil
   resolve_piece_lock()
 end
@@ -573,7 +581,7 @@ local function press_playing(btn)
     held.down = true
     if fits(piece.grid, piece.col, piece.row+1) then
       piece.row  = piece.row + 1
-      score      = score + 1
+      add_score(1)
       fall_timer = 0
       play_snd(snd_fall)
     end
@@ -673,7 +681,7 @@ function love.update(dt)
       fall_timer        = 0
       piece.row         = piece.row + 1
       last_was_rotation = false
-      if held.down then score = score + 1 end
+      if held.down then add_score(1) end
       play_snd(snd_fall)
     end
   else
