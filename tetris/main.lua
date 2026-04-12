@@ -180,7 +180,9 @@ local play_snd
 local function add_score(pts)
   local name = current_user and users[current_user].name or ""
   if name == "RODRIGO" then
-    pts = math.floor(pts * 1.25 + 0.5)
+    pts = math.floor(pts * 1.2 + 0.5)
+  elseif name == "SIMONE" then
+    pts = math.floor(pts * 1.1 + 0.5)
   end
   score = score + pts
 end
