@@ -8,7 +8,7 @@ LD_LIBRARY_PATH=/storage/roms/ports/moonlightnew/libs \
 
 LOVE_PID=$!
 sleep 1
-swaymsg '[title="Lê e Vence!"] floating enable, border none, move absolute position 0 0' 2>/dev/null
+swaymsg '[title="Le e Vence"] floating enable, border none, move absolute position 0 0' 2>/dev/null
 
 wait $LOVE_PID
 swaymsg 'output DSI-1 power off' 2>/dev/null

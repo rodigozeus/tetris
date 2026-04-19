@@ -590,8 +590,15 @@ end
 -- ═══════════════════════════════════════════════════════════════════════════
 --  TECLADO
 -- ═══════════════════════════════════════════════════════════════════════════
+-- gamepad: Select/Back fecha o jogo em qualquer estado
+function love.gamepadpressed(_, button)
+  if button == "back" then
+    love.event.quit()
+  end
+end
+
 function love.keypressed(k)
-  if k == "escape" or k == "start" or k == "select" then
+  if k == "escape" then
     love.event.quit()
   end
 
