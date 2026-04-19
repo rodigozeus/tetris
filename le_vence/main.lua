@@ -161,21 +161,24 @@ local META_ACERTOS = math.ceil(TOTAL * 0.8)   -- 16 de 20
 -- Posição global dos 4 botões de alternativa (na tela de baixo)
 -- Tela de baixo: x 640..1279 (640px), y 0..479 (480px)
 -- Caixa de pergunta ocupa y 8..135 (128px); botões ocupam y 136..480 (344px / 2 linhas)
+-- box pergunta: y=24 h=120 → fim=144; botões a partir de 152; dois rows + gap=8 + margin=24
+-- altura de cada row: (480-152-8-24)/2 = 148
 local BTNS = {
-  {x = 648, y = 136, w = 308, h = 156},  -- A  (superior esquerdo)
-  {x = 964, y = 136, w = 308, h = 156},  -- B  (superior direito)
-  {x = 648, y = 300, w = 308, h = 156},  -- C  (inferior esquerdo)
-  {x = 964, y = 300, w = 308, h = 156},  -- D  (inferior direito)
+  {x = 664, y = 152, w = 292, h = 148},  -- A  (superior esquerdo)
+  {x = 964, y = 152, w = 292, h = 148},  -- B  (superior direito)
+  {x = 664, y = 308, w = 292, h = 148},  -- C  (inferior esquerdo)
+  {x = 964, y = 308, w = 292, h = 148},  -- D  (inferior direito)
 }
 local LABELS = {"A", "B", "C", "D"}
 
--- Cor única para todos os botões de alternativa
-local COR_BTN     = {0.94, 0.96, 1.00}
-local COR_BTN_TXT = {0.10, 0.14, 0.32}
+local COR_BTN_TXT  = {0.10, 0.14, 0.32}
 local COR_CORRETO  = {0.22, 0.82, 0.36}
 local COR_ERRADO   = {0.88, 0.24, 0.24}
 local COR_CORRETO_TXT = {1, 1, 1}
 local COR_ERRADO_TXT  = {1, 1, 1}
+
+-- Hue aleatório por questão (gerado em love.load)
+local hues = {}
 
 -- ═══════════════════════════════════════════════════════════════════════════
 --  ESTADO
@@ -225,6 +228,29 @@ end
 
 local function play(snd)
   if snd then snd:stop(); snd:play() end
+end
+
+local function hsl(h, s, l)
+  local function hue2rgb(p, q, t)
+    if t < 0 then t = t + 1 end
+    if t > 1 then t = t - 1 end
+    if t < 1/6 then return p + (q - p) * 6 * t end
+    if t < 1/2 then return q end
+    if t < 2/3 then return p + (q - p) * (2/3 - t) * 6 end
+    return p
+  end
+  local q2 = l < 0.5 and l * (1 + s) or l + s - l * s
+  local p  = 2 * l - q2
+  return { hue2rgb(p, q2, h + 1/3), hue2rgb(p, q2, h), hue2rgb(p, q2, h - 1/3) }
+end
+
+-- Retorna as cores da tela de baixo para a questão atual
+local function cores_questao()
+  local h   = hues[ordem[idx]]
+  local bg  = hsl(h, 0.45, 0.38)   -- fundo escuro
+  local box = hsl(h, 0.48, 0.68)   -- caixa da pergunta (médio)
+  local btn = hsl(h, 0.42, 0.82)   -- alternativas (claro)
+  return bg, box, btn
 end
 
 -- Gera um tom sintético simples
@@ -293,6 +319,7 @@ function love.load()
 
   for i = 1, TOTAL do ordem[i] = i end
   shuffle(ordem)
+  for i = 1, TOTAL do hues[i] = love.math.random() end
 end
 
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -323,17 +350,17 @@ end
 --  DRAW — helpers
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- Tela de cima: fundo pastel + card branco com borda arredondada
-local function draw_card_top(bg, content_fn)
+-- Tela de cima: fundo + card com borda arredondada
+local function draw_card_top(bg, content_fn, card_color)
   love.graphics.setColor(bg)
   love.graphics.rectangle("fill", 0, 0, 640, 480)
 
   -- sombra leve
-  love.graphics.setColor(0, 0, 0, 0.08)
+  love.graphics.setColor(0, 0, 0, 0.12)
   rrect(19, 19, 610, 450, 22)
 
   -- card
-  love.graphics.setColor(1, 1, 1, 0.94)
+  love.graphics.setColor(card_color or {1, 1, 1, 0.94})
   rrect(15, 15, 610, 450, 20)
 
   -- borda suave
@@ -362,10 +389,10 @@ local function draw_tela_cima()
     return
   end
 
-  draw_card_top(q.bg, function()
+  draw_card_top({0.12, 0.22, 0.55}, function()
     -- indicador de progresso
     love.graphics.setFont(f_sm)
-    love.graphics.setColor(0.50, 0.50, 0.55)
+    love.graphics.setColor(0.30, 0.45, 0.75)
     love.graphics.printf(
       string.format("Pergunta %d de %d", idx, TOTAL),
       40, 26, 560, "right"
@@ -373,14 +400,13 @@ local function draw_tela_cima()
 
     -- texto principal de leitura
     love.graphics.setFont(f_body)
-    love.graphics.setColor(0, 0, 0)
-    love.graphics.printf(q.texto, 40, 58, 560, "left")
-  end)
+    love.graphics.setColor(0.08, 0.12, 0.28)
+    love.graphics.printf(q.texto, 40, 90, 560, "left")
+  end, {0.88, 0.94, 1.00})
 end
 
 local function draw_tela_baixo()
-  local q  = questao()
-  local bg = q.bg
+  local q = questao()
 
   if estado == "feedback" then
     love.graphics.setColor(0.14, 0.14, 0.18)
@@ -394,20 +420,22 @@ local function draw_tela_baixo()
     return
   end
 
-  -- fundo levemente mais escuro que a tela de cima
-  love.graphics.setColor(bg[1] * 0.66, bg[2] * 0.66, bg[3] * 0.66)
+  local cor_bg, cor_box, cor_btn = cores_questao()
+
+  -- fundo
+  love.graphics.setColor(cor_bg)
   love.graphics.rectangle("fill", 640, 0, 640, 480)
 
-  -- box da pergunta
-  love.graphics.setColor(1, 1, 1, 0.90)
-  rrect(648, 8, 624, 120, 14)
-  love.graphics.setColor(0.10, 0.10, 0.18)
+  -- box da pergunta (médio pastel)
+  love.graphics.setColor(cor_box)
+  rrect(664, 24, 592, 120, 14)
+  love.graphics.setColor(0.12, 0.12, 0.22)
   love.graphics.setFont(f_ui)
-  love.graphics.printf(q.pergunta, 660, 20, 602, "center")
+  love.graphics.printf(q.pergunta, 676, 36, 568, "left")
 
   -- 4 botões de alternativa
   for i, btn in ipairs(BTNS) do
-    local bc = COR_BTN
+    local bc = cor_btn
     local tc = COR_BTN_TXT
 
     if estado == "feedback" then
@@ -449,8 +477,7 @@ local function draw_intro()
     love.graphics.setColor(0.10, 0.10, 0.20)
     love.graphics.printf(
       "Olá, Gustavo!\n\n" ..
-      "Você vai ler 20 textos curtos e responder\n" ..
-      "uma pergunta sobre cada um.\n\n" ..
+      "Você vai ler 20 textos curtos e responder uma pergunta sobre cada um.\n\n" ..
       "Para ganhar, precisa acertar pelo menos 16 de 20 perguntas (80%).\n\n" ..
       "Leia com calma e boa sorte!",
       55, 80, 530, "left"
