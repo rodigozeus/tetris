@@ -162,10 +162,10 @@ local META_ACERTOS = math.ceil(TOTAL * 0.8)   -- 16 de 20
 -- Tela de baixo: x 640..1279 (640px), y 0..479 (480px)
 -- Caixa de pergunta ocupa y 8..135 (128px); botões ocupam y 136..480 (344px / 2 linhas)
 local BTNS = {
-  {x = 650, y = 136, w = 298, h = 168},  -- A  (superior esquerdo)
-  {x = 956, y = 136, w = 298, h = 168},  -- B  (superior direito)
-  {x = 650, y = 312, w = 298, h = 168},  -- C  (inferior esquerdo)
-  {x = 956, y = 312, w = 298, h = 168},  -- D  (inferior direito)
+  {x = 648, y = 136, w = 308, h = 156},  -- A  (superior esquerdo)
+  {x = 964, y = 136, w = 308, h = 156},  -- B  (superior direito)
+  {x = 648, y = 300, w = 308, h = 156},  -- C  (inferior esquerdo)
+  {x = 964, y = 300, w = 308, h = 156},  -- D  (inferior direito)
 }
 local LABELS = {"A", "B", "C", "D"}
 
@@ -445,10 +445,6 @@ end
 local function draw_intro()
   -- ── Tela de cima ──────────────────────────────────────────────────────
   draw_card_top({0.90, 0.92, 1.00}, function()
-    love.graphics.setFont(f_big)
-    love.graphics.setColor(0.15, 0.25, 0.60)
-    love.graphics.printf("Lê e Vence!", 40, 65, 560, "center")
-
     love.graphics.setFont(f_body)
     love.graphics.setColor(0.10, 0.10, 0.20)
     love.graphics.printf(
@@ -457,7 +453,7 @@ local function draw_intro()
       "uma pergunta sobre cada um.\n\n" ..
       "Para ganhar, precisa acertar pelo menos 16 de 20 perguntas (80%).\n\n" ..
       "Leia com calma e boa sorte!",
-      55, 148, 530, "left"
+      55, 80, 530, "left"
     )
   end)
 
