@@ -177,9 +177,6 @@ local COR_ERRADO   = {0.88, 0.24, 0.24}
 local COR_CORRETO_TXT = {1, 1, 1}
 local COR_ERRADO_TXT  = {1, 1, 1}
 
--- Hue aleatório por questão (gerado em love.load)
-local hues = {}
-
 -- ═══════════════════════════════════════════════════════════════════════════
 --  ESTADO
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -230,28 +227,6 @@ local function play(snd)
   if snd then snd:stop(); snd:play() end
 end
 
-local function hsl(h, s, l)
-  local function hue2rgb(p, q, t)
-    if t < 0 then t = t + 1 end
-    if t > 1 then t = t - 1 end
-    if t < 1/6 then return p + (q - p) * 6 * t end
-    if t < 1/2 then return q end
-    if t < 2/3 then return p + (q - p) * (2/3 - t) * 6 end
-    return p
-  end
-  local q2 = l < 0.5 and l * (1 + s) or l + s - l * s
-  local p  = 2 * l - q2
-  return { hue2rgb(p, q2, h + 1/3), hue2rgb(p, q2, h), hue2rgb(p, q2, h - 1/3) }
-end
-
--- Retorna as cores da tela de baixo para a questão atual
-local function cores_questao()
-  local h   = hues[ordem[idx]]
-  local bg  = hsl(h, 0.45, 0.38)   -- fundo escuro
-  local box = hsl(h, 0.48, 0.68)   -- caixa da pergunta (médio)
-  local btn = hsl(h, 0.42, 0.82)   -- alternativas (claro)
-  return bg, box, btn
-end
 
 -- Gera um tom sintético simples
 local function make_tone(freq, dur, vol, waveform)
@@ -319,7 +294,6 @@ function love.load()
 
   for i = 1, TOTAL do ordem[i] = i end
   shuffle(ordem)
-  for i = 1, TOTAL do hues[i] = love.math.random() end
 end
 
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -420,7 +394,9 @@ local function draw_tela_baixo()
     return
   end
 
-  local cor_bg, cor_box, cor_btn = cores_questao()
+  local cor_bg  = {0.12, 0.22, 0.55}
+  local cor_box = {0.50, 0.65, 0.92}
+  local cor_btn = {0.88, 0.94, 1.00}
 
   -- fundo
   love.graphics.setColor(cor_bg)
