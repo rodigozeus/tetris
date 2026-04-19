@@ -183,6 +183,9 @@ local COR_ERRADO_TXT  = {1, 1, 1}
 local STARTUP_DELAY = 0.3    -- tela preta enquanto o sway reposiciona a janela
 local startup_timer = 0
 
+local INPUT_DELAY  = 0.4     -- cooldown após troca de estado, evita toque fantasma
+local input_timer  = 0
+
 local estado     = "intro"   -- intro | questao | feedback | resultado
 local ordem      = {}
 local idx        = 1
@@ -267,7 +270,7 @@ end
 --  LOVE.LOAD
 -- ═══════════════════════════════════════════════════════════════════════════
 function love.load()
-  f_body = love.graphics.newFont(31)
+  f_body = love.graphics.newFont(28)
   f_ui   = love.graphics.newFont(27)
   f_btn  = love.graphics.newFont(26)
   f_big  = love.graphics.newFont(48)
@@ -298,6 +301,8 @@ end
 function love.update(dt)
   startup_timer = startup_timer + dt
   if startup_timer < STARTUP_DELAY then return end
+
+  input_timer = input_timer + dt
 
   if estado == "feedback" then
     t_feedback = t_feedback + dt
@@ -450,8 +455,7 @@ local function draw_intro()
       "Olá, Gustavo!\n\n" ..
       "Você vai ler 20 textos curtos e responder\n" ..
       "uma pergunta sobre cada um.\n\n" ..
-      "Para ganhar, precisa acertar pelo menos\n" ..
-      "16 de 20 perguntas (80%).\n\n" ..
+      "Para ganhar, precisa acertar pelo menos 16 de 20 perguntas (80%).\n\n" ..
       "Leia com calma e boa sorte!",
       55, 148, 530, "left"
     )
@@ -560,10 +564,12 @@ end
 --  TOUCH
 -- ═══════════════════════════════════════════════════════════════════════════
 local function handle_press(x, y)
+  if input_timer < INPUT_DELAY then return end
+
   if estado == "intro" then
-    -- qualquer toque na tela de baixo inicia o jogo
     if x >= 640 then
-      estado = "questao"
+      estado      = "questao"
+      input_timer = 0
     end
     return
   end
@@ -581,8 +587,9 @@ local function handle_press(x, y)
         else
           play(snd_errado)
         end
-        estado     = "feedback"
-        t_feedback = 0
+        estado      = "feedback"
+        t_feedback  = 0
+        input_timer = 0
         return
       end
     end
