@@ -180,6 +180,9 @@ local COR_ERRADO_TXT  = {1, 1, 1}
 -- ═══════════════════════════════════════════════════════════════════════════
 --  ESTADO
 -- ═══════════════════════════════════════════════════════════════════════════
+local STARTUP_DELAY = 0.3    -- tela preta enquanto o sway reposiciona a janela
+local startup_timer = 0
+
 local estado     = "intro"   -- intro | questao | feedback | resultado
 local ordem      = {}
 local idx        = 1
@@ -293,6 +296,9 @@ end
 --  LOVE.UPDATE
 -- ═══════════════════════════════════════════════════════════════════════════
 function love.update(dt)
+  startup_timer = startup_timer + dt
+  if startup_timer < STARTUP_DELAY then return end
+
   if estado == "feedback" then
     t_feedback = t_feedback + dt
     if t_feedback >= FB_DUR then
@@ -533,6 +539,11 @@ end
 --  LOVE.DRAW
 -- ═══════════════════════════════════════════════════════════════════════════
 function love.draw()
+  if startup_timer < STARTUP_DELAY then
+    love.graphics.clear(0, 0, 0)
+    return
+  end
+
   love.graphics.setBackgroundColor(0.14, 0.14, 0.18)
 
   if estado == "intro" then
