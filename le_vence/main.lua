@@ -160,27 +160,18 @@ local META_ACERTOS = math.ceil(TOTAL * 0.8)   -- 16 de 20
 
 -- Posição global dos 4 botões de alternativa (na tela de baixo)
 -- Tela de baixo: x 640..1279 (640px), y 0..479 (480px)
+-- Caixa de pergunta ocupa y 8..135 (128px); botões ocupam y 136..480 (344px / 2 linhas)
 local BTNS = {
-  {x = 650, y = 118, w = 298, h = 162},  -- A  (superior esquerdo)
-  {x = 956, y = 118, w = 298, h = 162},  -- B  (superior direito)
-  {x = 650, y = 288, w = 298, h = 162},  -- C  (inferior esquerdo)
-  {x = 956, y = 288, w = 298, h = 162},  -- D  (inferior direito)
+  {x = 650, y = 136, w = 298, h = 168},  -- A  (superior esquerdo)
+  {x = 956, y = 136, w = 298, h = 168},  -- B  (superior direito)
+  {x = 650, y = 312, w = 298, h = 168},  -- C  (inferior esquerdo)
+  {x = 956, y = 312, w = 298, h = 168},  -- D  (inferior direito)
 }
 local LABELS = {"A", "B", "C", "D"}
 
--- Cores dos botões no estado normal
-local COR_BTN = {
-  {0.52, 0.76, 1.00},  -- A  azul
-  {0.48, 0.87, 0.60},  -- B  verde
-  {1.00, 0.87, 0.38},  -- C  amarelo
-  {1.00, 0.60, 0.72},  -- D  rosa
-}
-local COR_BTN_TXT = {
-  {0.07, 0.17, 0.48},
-  {0.05, 0.28, 0.12},
-  {0.34, 0.24, 0.00},
-  {0.38, 0.07, 0.15},
-}
+-- Cor única para todos os botões de alternativa
+local COR_BTN     = {0.94, 0.96, 1.00}
+local COR_BTN_TXT = {0.10, 0.14, 0.32}
 local COR_CORRETO  = {0.22, 0.82, 0.36}
 local COR_ERRADO   = {0.88, 0.24, 0.24}
 local COR_CORRETO_TXT = {1, 1, 1}
@@ -198,12 +189,15 @@ local t_feedback = 0
 local FB_DUR     = 1.8       -- segundos mostrando feedback antes de avançar
 
 -- Fontes (carregadas em love.load)
-local f_body   -- 18px — texto de leitura (tamanho pensado para conforto infantil)
-local f_ui     -- 16px — pergunta
-local f_btn    -- 15px — alternativas nos botões
-local f_big    -- 28px — títulos e destaques
-local f_huge   -- 58px — placar final
-local f_sm     -- 12px — indicadores secundários (progresso, etc.)
+local f_body   -- 31px — texto de leitura
+local f_ui     -- 27px — pergunta
+local f_btn    -- 26px — alternativas nos botões
+local f_big    -- 48px — títulos e destaques
+local f_huge   -- 99px — placar final
+local f_sm     -- 20px — indicadores secundários (progresso, etc.)
+
+-- Sons (gerados em love.load)
+local snd_click, snd_correto, snd_errado
 
 -- ═══════════════════════════════════════════════════════════════════════════
 --  UTILITÁRIOS
@@ -223,16 +217,73 @@ local function shuffle(t)
   end
 end
 
+local function play(snd)
+  if snd then snd:stop(); snd:play() end
+end
+
+-- Gera um tom sintético simples
+local function make_tone(freq, dur, vol, waveform)
+  local rate = 44100
+  local n    = math.floor(rate * dur)
+  local sd   = love.sound.newSoundData(n, rate, 16, 1)
+  for i = 0, n - 1 do
+    local t   = i / rate
+    local env = math.min(1, t / 0.005) * math.min(1, (dur - t) / 0.04)
+    local s
+    if waveform == "square" then
+      s = (math.sin(2 * math.pi * freq * t) >= 0) and 1.0 or -1.0
+    else
+      s = math.sin(2 * math.pi * freq * t)
+    end
+    sd:setSample(i, s * env * vol)
+  end
+  return love.audio.newSource(sd, "static")
+end
+
+-- Gera uma sequência de notas
+local function make_seq(notes, vol)
+  local rate    = 44100
+  local total   = 0
+  for _, n in ipairs(notes) do total = total + math.floor(rate * n.dur) end
+  local sd      = love.sound.newSoundData(total, rate, 16, 1)
+  local cursor  = 0
+  for _, note in ipairs(notes) do
+    local n = math.floor(rate * note.dur)
+    for i = 0, n - 1 do
+      local t   = i / rate
+      local env = math.min(1, t / 0.008) * math.min(1, (note.dur - t) / 0.05)
+      local s   = note.freq > 0 and math.sin(2 * math.pi * note.freq * t) or 0
+      sd:setSample(cursor + i, s * env * vol)
+    end
+    cursor = cursor + n
+  end
+  return love.audio.newSource(sd, "static")
+end
+
 -- ═══════════════════════════════════════════════════════════════════════════
 --  LOVE.LOAD
 -- ═══════════════════════════════════════════════════════════════════════════
 function love.load()
-  f_body = love.graphics.newFont(18)
-  f_ui   = love.graphics.newFont(16)
-  f_btn  = love.graphics.newFont(15)
-  f_big  = love.graphics.newFont(28)
-  f_huge = love.graphics.newFont(58)
-  f_sm   = love.graphics.newFont(12)
+  f_body = love.graphics.newFont(31)
+  f_ui   = love.graphics.newFont(27)
+  f_btn  = love.graphics.newFont(26)
+  f_big  = love.graphics.newFont(48)
+  f_huge = love.graphics.newFont(99)
+  f_sm   = love.graphics.newFont(20)
+
+  -- click: toque sutil de alta frequência
+  snd_click   = make_tone(1100, 0.06, 0.35, "sine")
+  -- correto: arpegio ascendente animado
+  snd_correto = make_seq({
+    {freq=523, dur=0.10},  -- C5
+    {freq=659, dur=0.10},  -- E5
+    {freq=784, dur=0.18},  -- G5
+  }, 0.55)
+  -- errado: nota grave descendente
+  snd_errado  = make_seq({
+    {freq=300, dur=0.12},
+    {freq=220, dur=0.20},
+  }, 0.55)
 
   for i = 1, TOTAL do ordem[i] = i end
   shuffle(ordem)
@@ -285,6 +336,21 @@ end
 local function draw_tela_cima()
   local q = questao()
 
+  if estado == "feedback" then
+    -- tela de cima vira um painel grande de acerto/erro
+    local acertou = (escolha == q.correta)
+    local bg  = acertou and {0.15, 0.72, 0.30} or {0.82, 0.18, 0.18}
+    local txt = acertou and "Acertou!" or "Errou!"
+
+    love.graphics.setColor(bg)
+    love.graphics.rectangle("fill", 0, 0, 640, 480)
+
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.setFont(f_huge)
+    love.graphics.printf(txt, 0, 480/2 - f_huge:getHeight()/2, 640, "center")
+    return
+  end
+
   draw_card_top(q.bg, function()
     -- indicador de progresso
     love.graphics.setFont(f_sm)
@@ -305,21 +371,33 @@ local function draw_tela_baixo()
   local q  = questao()
   local bg = q.bg
 
+  if estado == "feedback" then
+    love.graphics.setColor(0.14, 0.14, 0.18)
+    love.graphics.rectangle("fill", 640, 0, 640, 480)
+    love.graphics.setColor(0.55, 0.58, 0.65)
+    love.graphics.setFont(f_ui)
+    love.graphics.printf(
+      "Carregando próxima pergunta...",
+      640, 480/2 - f_ui:getHeight()/2, 640, "center"
+    )
+    return
+  end
+
   -- fundo levemente mais escuro que a tela de cima
   love.graphics.setColor(bg[1] * 0.66, bg[2] * 0.66, bg[3] * 0.66)
   love.graphics.rectangle("fill", 640, 0, 640, 480)
 
   -- box da pergunta
   love.graphics.setColor(1, 1, 1, 0.90)
-  rrect(648, 8, 624, 102, 14)
+  rrect(648, 8, 624, 120, 14)
   love.graphics.setColor(0.10, 0.10, 0.18)
   love.graphics.setFont(f_ui)
   love.graphics.printf(q.pergunta, 660, 20, 602, "center")
 
   -- 4 botões de alternativa
   for i, btn in ipairs(BTNS) do
-    local bc  = COR_BTN[i]
-    local tc  = COR_BTN_TXT[i]
+    local bc = COR_BTN
+    local tc = COR_BTN_TXT
 
     if estado == "feedback" then
       if i == q.correta then
@@ -344,11 +422,11 @@ local function draw_tela_baixo()
     love.graphics.setLineWidth(1.5)
     rrect(btn.x, btn.y, btn.w, btn.h, 14, "line")
 
-    -- texto (vertically centered for single-line options)
+    -- texto centrado verticalmente (comporta até 2 linhas com fonte maior)
     love.graphics.setColor(tc)
     love.graphics.setFont(f_btn)
     local txt = LABELS[i] .. ")  " .. q.opcoes[i]
-    local ty  = btn.y + math.floor((btn.h - f_btn:getHeight()) / 2)
+    local ty  = btn.y + math.floor(btn.h / 2 - f_btn:getHeight())
     love.graphics.printf(txt, btn.x + 12, ty, btn.w - 24, "center")
   end
 end
@@ -483,9 +561,15 @@ local function handle_press(x, y)
     for i, btn in ipairs(BTNS) do
       if x >= btn.x and x < btn.x + btn.w and
          y >= btn.y and y < btn.y + btn.h then
+        play(snd_click)
         escolha    = i
         local q    = questao()
-        if i == q.correta then acertos = acertos + 1 end
+        if i == q.correta then
+          acertos = acertos + 1
+          play(snd_correto)
+        else
+          play(snd_errado)
+        end
         estado     = "feedback"
         t_feedback = 0
         return
@@ -507,7 +591,7 @@ end
 --  TECLADO
 -- ═══════════════════════════════════════════════════════════════════════════
 function love.keypressed(k)
-  if k == "escape" or k == "start" then
+  if k == "escape" or k == "start" or k == "select" then
     love.event.quit()
   end
 
