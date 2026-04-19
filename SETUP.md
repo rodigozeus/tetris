@@ -291,6 +291,52 @@ Tela de baixo (DSI-1): x = 640 .. 1279 →  centro x = 960
 
 ---
 
+## DraStic — Emulação de NDS
+
+O DraStic é lançado pelo Rocknix via `/usr/bin/start_drastic.sh <rom>`, que configura variáveis de ambiente e usa `LD_PRELOAD=/usr/lib/libdrastouch.so` para gerenciar as duas telas e o touch no RG DS.
+
+### Arquitetura do DraStic no RG DS
+
+- O DraStic renderiza **direto no framebuffer DRM/KMS**, ignorando o compositor Sway. Trocar posições de outputs via `swaymsg` não afeta o display.
+- O `libdrastouch.so` lê os eventos de touch **direto do evdev**, ignorando o mapeamento de touch do Sway. Trocar `map_to_output` também não funciona.
+- As duas touchscreens são dispositivos **Goodix Capacitive TouchScreen** com o mesmo identificador Sway (`1046:911:Goodix_Capacitive_TouchScreen`):
+  - `event1` → `/devices/platform/fe5c0000.i2c/` → tela de cima (DSI-2)
+  - `event2` → `/devices/platform/fe5e0000.i2c/` → tela de baixo (DSI-1)
+
+### Configuração do DraStic
+
+O config fica em `/storage/.config/drastic/config/drastic.cfg`. Parâmetros relevantes:
+
+| Parâmetro | Valores | Descrição |
+|-----------|---------|-----------|
+| `screen_swap` | `0` / `1` | Troca visualmente as telas DS |
+| `mirror_touch` | `0` / `1` | Faz o touch seguir o swap visual |
+
+Para trocar as telas **com touch funcionando corretamente**, ambos devem ser `1` juntos. Ativar só `screen_swap` troca o display mas o touch continua na tela de baixo.
+
+### Lançar um jogo DS com telas trocadas
+
+Criar um script em `/storage/roms/ports/NomeDoJogo.sh` que ativa as opções antes de abrir e restaura ao sair:
+
+```bash
+#!/bin/bash
+CFG=/storage/.config/drastic/config/drastic.cfg
+
+sed -i 's/^screen_swap = .*/screen_swap = 1/' "$CFG"
+sed -i 's/^mirror_touch = .*/mirror_touch = 1/' "$CFG"
+
+/usr/bin/start_drastic.sh "/storage/roms/nds/NomeDoJogo.nds"
+
+sed -i 's/^screen_swap = .*/screen_swap = 0/' "$CFG"
+sed -i 's/^mirror_touch = .*/mirror_touch = 0/' "$CFG"
+```
+
+O jogo aparece em **Ports** no EmulationStation após **Start → Update Games List**.
+
+> Não é necessário mexer nos outputs do Sway — o DraStic gerencia suas próprias telas via SDL + libdrastouch.so.
+
+---
+
 ## Rocknix — Downloads e Atualizações
 
 O RG DS só tem suporte nas **nightly builds** do Rocknix (versões estáveis no GitHub não incluem o dispositivo).
