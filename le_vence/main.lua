@@ -745,7 +745,7 @@ local function draw_tela_baixo()
   end
 
   local cor_bg  = {0.12, 0.22, 0.55}
-  local cor_box = {0.46, 0.56, 0.88}
+  local cor_box = {0.60, 0.36, 0.92}
   local cor_btn = {0.88, 0.94, 1.00}
 
   -- fundo
@@ -755,7 +755,7 @@ local function draw_tela_baixo()
   -- box da pergunta (médio pastel)
   love.graphics.setColor(cor_box)
   rrect(664, 24, 592, 120, 14)
-  love.graphics.setColor(0.12, 0.12, 0.22)
+  love.graphics.setColor(1, 1, 1)
   love.graphics.setFont(f_ui)
   love.graphics.printf(q.pergunta, 676, 36, 568, "left")
 
