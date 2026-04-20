@@ -298,7 +298,7 @@ local QUESTOES = {
   {
     texto    = "Pedro e Nina montaram uma cabana com lençóis na sala. Depois, entraram com lanternas e fingiram estar em uma floresta.",
     pergunta = "Com o que Pedro e Nina montaram a cabana?",
-    opcoes   = {"Com cadeiras e lençóis", "Com tijolos", "Com madeira", "Com almofadas e areia"},
+    opcoes   = {"Com lençóis", "Com tijolos", "Com madeira", "Com almofadas e areia"},
     correta  = 1,
     bg       = {0.93, 0.89, 1.00},
   },
