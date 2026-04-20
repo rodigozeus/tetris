@@ -757,7 +757,7 @@ local function draw_tela_baixo()
   rrect(664, 24, 592, 120, 14)
   love.graphics.setColor(1, 1, 1)
   love.graphics.setFont(f_ui)
-  love.graphics.printf(q.pergunta, 676, 36, 568, "left")
+  love.graphics.printf(q.pergunta, 676, 48, 568, "left")
 
   -- 4 botões de alternativa
   for i, btn in ipairs(BTNS) do
