@@ -130,7 +130,7 @@ local QUESTOES = {
   },
   --17
   {
-    texto    = "O gato Mimi adora brincar com novelos de lã. Seu novelo favorito é o vermelho. Ele rola no tapete da sala o dia todo.",
+    texto    = "O gato Mimi adora brincar com novelos de lã. Seu novelo favorito é o vermelho. Ele rola no tapete azul da sala o dia todo.",
     pergunta = "Qual é a cor do novelo favorito do gato Mimi?",
     opcoes   = {"Azul", "Amarelo", "Vermelho", "Verde"},
     correta  = 3,
@@ -330,7 +330,7 @@ local QUESTOES = {
     bg       = {1.00, 0.97, 0.84},
   },
   {
-    texto    = "Breno levou seu carrinho vermelho para a casa do amigo. Os dois fizeram uma pista comprida usando caixas de papelão.",
+    texto    = "Breno levou seu carrinho vermelho para a casa do amigo. Os dois fizeram uma pista comprida usando caixas de papelão azul.",
     pergunta = "Que cor era o carrinho de Breno?",
     opcoes   = {"Azul", "Verde", "Amarelo", "Vermelho"},
     correta  = 4,
@@ -377,20 +377,6 @@ local QUESTOES = {
     opcoes   = {"Branca", "Verde", "Amarela", "Azul"},
     correta  = 4,
     bg       = {0.86, 0.94, 1.00},
-  },
-  {
-    texto    = "Na oficina, o mecânico usou uma chave para apertar a roda da bicicleta. Depois, encheu o pneu com uma bomba de ar.",
-    pergunta = "O que o mecânico encheu com a bomba de ar?",
-    opcoes   = {"O guidão", "O banco", "O pneu", "A corrente"},
-    correta  = 3,
-    bg       = {0.92, 0.92, 1.00},
-  },
-  {
-    texto    = "Camila foi ao zoológico e viu macacos, girafas e elefantes. O animal que ela achou mais alto foi a girafa.",
-    pergunta = "Qual animal Camila achou mais alto?",
-    opcoes   = {"Macaco", "Girafa", "Elefante", "Leão"},
-    correta  = 2,
-    bg       = {1.00, 0.95, 0.86},
   },
   {
     texto    = "Tomás esqueceu o caderno em casa e ficou preocupado. Seu pai voltou rapidinho e levou o caderno para a escola.",
@@ -872,13 +858,7 @@ local function draw_resultado()
     local titulo = game_over_erros and "Que pena, Gustavo!" or "Parabéns, Gustavo!"
     love.graphics.printf(titulo, 40, 52, 560, "center")
 
-    if game_over_erros then
-      for i = 1, 4 do
-        love.graphics.setColor(0.55, 0.18, 0.18)
-        love.graphics.setLineWidth(2)
-        draw_heart(152 + (i-1)*72, 200, 2.0, false)
-      end
-    else
+    if not game_over_erros then
       love.graphics.setFont(f_huge)
       love.graphics.setColor(ink)
       love.graphics.printf(
@@ -892,7 +872,7 @@ local function draw_resultado()
     local msg, msg_y
     if game_over_erros then
       msg   = "Você perdeu todos os corações.\n\nTente novamente na semana que vem!"
-      msg_y = 270
+      msg_y = 200
     else
       msg   = string.format(
         "Você acertou %d%% das perguntas!\n\n" ..
