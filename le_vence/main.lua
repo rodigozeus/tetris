@@ -24,14 +24,6 @@ local QUESTOES = {
     correta  = 4,
     bg       = {1.00, 0.97, 0.82},
   },
-  --3
-  {
-    texto    = "O sol nasce de manhã e se esconde à noite. Ele aquece a Terra e dá luz. À noite aparece a lua.",
-    pergunta = "Quando o sol nasce?",
-    opcoes   = {"À noite", "De manhã", "À tarde", "No inverno"},
-    correta  = 2,
-    bg       = {1.00, 0.93, 0.80},
-  },
   --4
   {
     texto    = "Hoje está chovendo muito. Bia pegou o guarda-chuva e saiu de casa. Na rua, ela viu uma poça d'água e pulou por cima.",
@@ -502,7 +494,6 @@ local QUESTOES = {
 
 local LIMITE_QUESTOES = 20
 local TOTAL        = math.min(#QUESTOES, LIMITE_QUESTOES)
-local META_ACERTOS = math.ceil(TOTAL * 0.8)   -- 16 de 20
 
 -- Posição global dos 4 botões de alternativa (na tela de baixo)
 -- Tela de baixo: x 640..1279 (640px), y 0..479 (480px)
@@ -532,13 +523,15 @@ local startup_timer = 0
 local INPUT_DELAY  = 0.4     -- cooldown após troca de estado, evita toque fantasma
 local input_timer  = 0
 
-local estado     = "intro"   -- intro | questao | feedback | resultado
-local ordem      = {}
-local idx        = 1
-local acertos    = 0
-local escolha    = 0         -- botão selecionado (1-4), 0 = nenhum
-local t_feedback = 0
-local FB_DUR     = 1.8       -- segundos mostrando feedback antes de avançar
+local estado          = "intro"   -- intro | questao | feedback | resultado
+local ordem           = {}
+local idx             = 1
+local acertos         = 0
+local erros           = 0
+local game_over_erros = false
+local escolha         = 0         -- botão selecionado (1-4), 0 = nenhum
+local t_feedback      = 0
+local FB_DUR          = 1.8       -- segundos mostrando feedback antes de avançar
 
 -- Fontes (carregadas em love.load)
 local f_body   -- 31px — texto de leitura
@@ -660,7 +653,10 @@ function love.update(dt)
     if t_feedback >= FB_DUR then
       t_feedback = 0
       escolha    = 0
-      if idx < TOTAL then
+      if erros >= 4 then
+        game_over_erros = true
+        estado = "resultado"
+      elseif idx < TOTAL then
         idx    = idx + 1
         estado = "questao"
       else
@@ -673,6 +669,21 @@ end
 -- ═══════════════════════════════════════════════════════════════════════════
 --  DRAW — helpers
 -- ═══════════════════════════════════════════════════════════════════════════
+
+-- Fórmula paramétrica clássica do coração; size ~= raio em pixels / 16
+local function draw_heart(cx, cy, size, filled)
+  local pts = {}
+  local n   = 28
+  for i = 0, n do
+    local t  = (i / n) * 2 * math.pi
+    local hx = size * 16 * (math.sin(t) ^ 3)
+    local hy = -size * (13 * math.cos(t) - 5 * math.cos(2*t)
+                        - 2 * math.cos(3*t) - math.cos(4*t))
+    pts[#pts+1] = cx + hx
+    pts[#pts+1] = cy + hy
+  end
+  love.graphics.polygon(filled and "fill" or "line", pts)
+end
 
 -- Tela de cima: fundo + card com borda arredondada
 local function draw_card_top(bg, content_fn, card_color)
@@ -714,6 +725,21 @@ local function draw_tela_cima()
   end
 
   draw_card_top({0.12, 0.22, 0.55}, function()
+    -- corações de vida no canto superior esquerdo
+    local hs   = 0.75    -- scale do coração (~24px de largura)
+    local hy   = 34      -- centro vertical dos corações
+    local vidas = 4 - erros
+    for i = 1, 4 do
+      if i <= vidas then
+        love.graphics.setColor(0.90, 0.12, 0.18)
+        draw_heart(38 + (i-1)*28, hy, hs, true)
+      else
+        love.graphics.setColor(0.55, 0.20, 0.22)
+        love.graphics.setLineWidth(1.5)
+        draw_heart(38 + (i-1)*28, hy, hs, false)
+      end
+    end
+
     -- indicador de progresso
     love.graphics.setFont(f_sm)
     love.graphics.setColor(0.30, 0.45, 0.75)
@@ -803,9 +829,9 @@ local function draw_intro()
     love.graphics.setColor(0.10, 0.10, 0.20)
     love.graphics.printf(
       "Olá, Gustavo!\n\n" ..
-      "Você vai ler 20 textos curtos e responder uma pergunta sobre cada um.\n\n" ..
-      "Para ganhar, precisa acertar pelo menos 16 de 20 perguntas (80%).\n\n" ..
-      "Leia com calma e boa sorte!",
+      "São 20 textos curtos. Leia cada um e responda a pergunta.\n\n" ..
+      "Você tem 4 corações. Se perder todos, perde o jogo.\n\n" ..
+      "Boa sorte!",
       55, 80, 530, "left"
     )
   end)
@@ -828,47 +854,55 @@ local function draw_intro()
 end
 
 local function draw_resultado()
-  local pct    = math.floor(acertos / TOTAL * 100 + 0.5)
-  local passou = acertos >= META_ACERTOS
-
-  local bg_top = passou and {0.82, 1.00, 0.86} or {1.00, 0.88, 0.82}
-  local bg_bot = passou and {0.52, 0.88, 0.58} or {0.90, 0.55, 0.52}
-  local ink    = passou and {0.06, 0.36, 0.13} or {0.36, 0.08, 0.05}
+  local bg_top, bg_bot, ink
+  if game_over_erros then
+    bg_top = {1.00, 0.86, 0.82}
+    bg_bot = {0.82, 0.28, 0.25}
+    ink    = {0.40, 0.05, 0.05}
+  else
+    bg_top = {0.82, 1.00, 0.86}
+    bg_bot = {0.52, 0.88, 0.58}
+    ink    = {0.06, 0.36, 0.13}
+  end
 
   -- ── Tela de cima ──────────────────────────────────────────────────────
   draw_card_top(bg_top, function()
     love.graphics.setFont(f_big)
     love.graphics.setColor(ink)
-    local titulo = passou and "Parabéns, Gustavo!" or "Quase lá, Gustavo!"
+    local titulo = game_over_erros and "Que pena, Gustavo!" or "Parabéns, Gustavo!"
     love.graphics.printf(titulo, 40, 52, 560, "center")
 
-    love.graphics.setFont(f_huge)
-    love.graphics.setColor(ink)
-    love.graphics.printf(
-      string.format("%d / %d", acertos, TOTAL),
-      40, 112, 560, "center"
-    )
+    if game_over_erros then
+      for i = 1, 4 do
+        love.graphics.setColor(0.55, 0.18, 0.18)
+        love.graphics.setLineWidth(2)
+        draw_heart(152 + (i-1)*72, 200, 2.0, false)
+      end
+    else
+      love.graphics.setFont(f_huge)
+      love.graphics.setColor(ink)
+      love.graphics.printf(
+        string.format("%d / %d", acertos, TOTAL),
+        40, 112, 560, "center"
+      )
+    end
 
     love.graphics.setFont(f_body)
     love.graphics.setColor(0.12, 0.12, 0.18)
-    local msg
-    if passou then
-      msg = string.format(
+    local msg, msg_y
+    if game_over_erros then
+      msg   = "Você perdeu todos os corações.\n\nTente novamente na semana que vem!"
+      msg_y = 270
+    else
+      msg   = string.format(
         "Você acertou %d%% das perguntas!\n\n" ..
         "Você passou no teste de leitura!\n\n" ..
         "Parabéns — o videogame é seu!",
-        pct
+        math.floor(acertos / TOTAL * 100 + 0.5)
       )
-    else
-      msg = string.format(
-        "Você acertou %d%% das perguntas.\n\n" ..
-        "Precisava de 80%% para passar.\n\n" ..
-        "Continue praticando!\n" ..
-        "Tente de novo na semana que vem.",
-        pct
-      )
+      msg_y = 235
     end
-    love.graphics.printf(msg, 55, 235, 530, "center")
+    love.graphics.printf(msg, 55, msg_y, 530, "center")
   end)
 
   -- ── Tela de baixo ─────────────────────────────────────────────────────
@@ -877,10 +911,10 @@ local function draw_resultado()
 
   love.graphics.setColor(1, 1, 1, 0.92)
   love.graphics.setFont(f_big)
-  local bot_msg = passou
-    and "Uhuuu!\nVocê conseguiu!"
-    or  "Foi por pouco!\nNa próxima você passa!"
-  love.graphics.printf(bot_msg, 640, 175, 640, "center")
+  local bot_msg = game_over_erros
+    and "Perdeu todos\nos corações!\nTente na semana\nque vem!"
+    or  "Uhuuu!\nVocê conseguiu!"
+  love.graphics.printf(bot_msg, 640, 140, 640, "center")
 
   -- dica de saída
   love.graphics.setFont(f_sm)
@@ -934,6 +968,7 @@ local function handle_press(x, y)
           acertos = acertos + 1
           play(snd_correto)
         else
+          erros = erros + 1
           play(snd_errado)
         end
         estado      = "feedback"
@@ -981,7 +1016,11 @@ function love.keypressed(k)
     if i then
       escolha    = i
       local q    = questao()
-      if i == q.correta then acertos = acertos + 1 end
+      if i == q.correta then
+        acertos = acertos + 1
+      else
+        erros = erros + 1
+      end
       estado     = "feedback"
       t_feedback = 0
     end
