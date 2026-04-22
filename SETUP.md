@@ -333,6 +333,25 @@ sed -i 's/^mirror_touch = .*/mirror_touch = 0/' "$CFG"
 
 O jogo aparece em **Ports** no EmulationStation após **Start → Update Games List**.
 
+### Microfone em jogos NDS
+
+O `libdrastouch.so` implementa captura de microfone real via SDL + PipeWire. Requer duas configurações:
+
+**1. Threshold de sensibilidade** (persiste entre boots):
+```bash
+set_setting 'nds.microphone_sensitivity' 0.1
+```
+O valor é float normalizado (0.0–1.0). Valores inteiros como `30` nunca disparam — o RMS do áudio float nunca ultrapassa 1.0. Válido para todos os jogos NDS.
+
+**2. Default source do PipeWire** (necessário a cada boot):
+
+Por padrão o PipeWire aponta o source de captura para o monitor do speaker, não para o microfone. Corrigir antes de abrir o DraStic:
+```bash
+pactl set-default-source alsa_input._sys_devices_platform_sound_sound_card0.HiFi__Mic__source
+```
+
+Incluir esse comando no script `.sh` de lançamento de qualquer jogo NDS que use microfone (ver [`Zelda_PH.sh`](Zelda_PH.sh) como referência).
+
 > Não é necessário mexer nos outputs do Sway — o DraStic gerencia suas próprias telas via SDL + libdrastouch.so.
 
 ---
