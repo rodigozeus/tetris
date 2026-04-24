@@ -137,7 +137,7 @@ Para testes no PC usar também `love.keypressed(key)` com as teclas do teclado.
 
 Arquivos ficam em:
 ```
-C:/Users/rodig/OneDrive/Área de Trabalho/games/nome_do_jogo/
+C:/Users/rodig/OneDrive/Projetos/games/nome_do_jogo/
 ├── main.lua
 └── conf.lua
 ```
@@ -202,12 +202,15 @@ end
 
 ## Jogos Criados
 
-| Jogo | Pasta | Script | Descrição |
-|------|-------|--------|-----------|
-| Tetris     | `tetris/`     | `Tetris.sh`     | Tetris clássico com níveis e score |
-| Snake      | `snake/`      | `Snake.sh`      | Snake com velocidade progressiva e recorde persistente |
-| Lê Comigo  | `le_comigo/`  | `LeComigo.sh`   | Jogo educativo cooperativo de leitura de sílabas |
-| Update     | `update/`     | `Update.sh`     | Utilitário de atualização de jogos baixando o repositório do GitHub (dual screen) |
+| Jogo | Pasta | Script | Telas | Descrição |
+|------|-------|--------|-------|-----------|
+| Snake          | `snake/`          | `Snake.sh`          | 1 | Snake com velocidade progressiva e recorde persistente |
+| Tetris         | `tetris/`         | `Tetris.sh`         | 1 | Tetris clássico com níveis, score e multi-user |
+| Lê Comigo      | `le_comigo/`      | `LeComigo.sh`       | 1 | Jogo educativo cooperativo de leitura de sílabas |
+| Lê e Vence     | `le_vence/`       | `Gustavo.sh`        | 2 | Jogo educativo de leitura e compreensão com múltipla escolha |
+| Zelda PH Saves | `zelda_ph_saves/` | `Zelda_PH_Saves.sh` | 2 | Gerenciador de saves sancionados para Zelda PH |
+| Update         | `update/`         | `Update.sh`         | 2 | Utilitário de atualização de jogos via GitHub (dual screen) |
+| TouchTest      | `touchtest/`      | `TouchTest.sh`      | 2 | Utilitário de dev para testar touch nas duas telas |
 
 ---
 
@@ -353,6 +356,16 @@ pactl set-default-source alsa_input._sys_devices_platform_sound_sound_card0.HiFi
 Incluir esse comando no script `.sh` de lançamento de qualquer jogo NDS que use microfone (ver [`Zelda_PH.sh`](Zelda_PH.sh) como referência).
 
 > Não é necessário mexer nos outputs do Sway — o DraStic gerencia suas próprias telas via SDL + libdrastouch.so.
+
+### Zelda PH — Workaround das velas
+
+O detector de sopro de vela em Zelda: Phantom Hourglass requer uma forma de onda contínua de baixa frequência que o microfone do RG DS não consegue reproduzir de forma confiável.
+
+**Solução adotada:** saves sancionados gerenciados pelo app `zelda_ph_saves` ([Zelda_PH_Saves.sh](Zelda_PH_Saves.sh)).
+
+- A pasta `Sanctioned Saves/` no repositório contém saves `.dsv` tirados logo após cada cena de vela
+- O app permite aplicar qualquer save com backup automático do save atual
+- No console, os saves ficam em `/storage/roms/ports/Sanctioned Saves/`
 
 ---
 

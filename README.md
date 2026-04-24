@@ -42,7 +42,7 @@ Jogos feitos em **Love2D (Lua)**, rodando num **Anbernic RG DS** com **Rocknix**
 - **Lock Delay** — a peça não trava imediatamente ao tocar o chão
 - Velocidade aumenta por nível seguindo a curva clássica do NES
 - Sistema de **nome no placar** (tela de entrada de caracteres com D-pad)
-- Prévia da próxima peça
+- Prévia da próxima peça e ghost piece
 
 **Controles:** D-pad para mover/descer · A/B/Cima para girar · Start para pausar
 
@@ -69,6 +69,35 @@ Pensado para ser jogado **em dupla**: a criança lê a sílaba em voz alta, o ad
 
 ---
 
+### Lê e Vence
+> Jogo educativo de leitura e compreensão com múltipla escolha, em dual screen.
+
+- **Tela superior** — texto da questão com corações de vida
+- **Tela inferior** — 4 opções de resposta em botões tocáveis
+- 48 questões, 20 por sessão, em ordem aleatória
+- 4 vidas (corações) — game over ao perdê-las todas
+- Pontuação por acerto com combo; erros não subtraem pontos
+- Toque diretamente nos botões da tela inferior
+
+**Controles:** toque nos botões · Start para pausar
+
+---
+
+### Zelda PH — Saves
+> Gerenciador de saves sancionados para Zelda: Phantom Hourglass.
+
+Contorna as cenas de **sopro de vela** que o microfone do console não consegue reproduzir. Em vez de tentar emular sopro real, carrega saves pré-validados tirados logo após cada cena de vela.
+
+- **Tela superior** — info do save selecionado e status da operação
+- **Tela inferior** — lista scrollável de saves com badge numerado
+- Faz **backup automático** (`.dsv.bak`) antes de substituir o save atual
+- Confirmação visual: verde (sucesso) ou vermelho (erro)
+- A Triforce dourada renderizada em polígonos
+
+**Controles:** D-pad ↑↓ para navegar · A para aplicar save · toque direto na lista
+
+---
+
 ### Update
 > Atualizador de jogos direto do console, em dual screen.
 
@@ -83,19 +112,27 @@ Pensado para ser jogado **em dupla**: a criança lê a sílaba em voz alta, o ad
 
 ```
 games/
-├── snake/          main.lua + conf.lua
-├── tetris/         main.lua + conf.lua
-├── le_comigo/      main.lua + conf.lua
-├── update/         main.lua + conf.lua
-├── roms/           ← ROMs organizadas por sistema (nds/, snes/, ...)
-├── saves/          ← Backup dos saves flat (.dsv, .sav, .srm)
-├── releases/       ← Imagens do Rocknix (.img.gz)
-├── Snake.sh        ← script de lançamento no console
+├── snake/              main.lua + conf.lua
+├── tetris/             main.lua + conf.lua
+├── le_comigo/          main.lua + conf.lua
+├── le_vence/           main.lua + conf.lua
+├── zelda_ph_saves/     main.lua + conf.lua
+├── update/             main.lua + conf.lua
+├── touchtest/          main.lua + conf.lua  (utilitário de dev)
+├── Sanctioned Saves/   ← saves .dsv pré-validados do Zelda PH
+├── roms/               ← ROMs organizadas por sistema (nds/, snes/, ...)
+├── saves/              ← Backup dos saves flat (.dsv, .sav, .srm)
+├── releases/           ← Imagens do Rocknix (.img.gz)
+├── Snake.sh            ← script de lançamento no console
 ├── Tetris.sh
 ├── LeComigo.sh
+├── Gustavo.sh          ← lança Lê e Vence
+├── Zelda_PH.sh         ← lança Zelda PH com telas trocadas e mic configurado
+├── Zelda_PH_Saves.sh   ← lança o gerenciador de saves
 ├── Update.sh
-├── SETUP.md        ← documentação técnica completa do ambiente
-└── instala_emmc.md ← guia de instalação do Rocknix na eMMC interna
+├── TouchTest.sh
+├── SETUP.md            ← documentação técnica completa do ambiente
+└── instala_emmc.md     ← guia de instalação do Rocknix na eMMC interna
 ```
 
 ---
