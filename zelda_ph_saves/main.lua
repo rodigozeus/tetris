@@ -35,9 +35,8 @@ local LIST_Y  = 48
 local BTNS_Y  = LIST_Y + VISIBLE * ITEM_H + 24   -- 348
 
 local BTN = {
-  apply   = {x = OX + 12,  y = BTNS_Y,      w = 330, h = 70},
-  restore = {x = OX + 350, y = BTNS_Y,      w = 278, h = 70},
-  exit    = {x = OX + 200, y = BTNS_Y + 82, w = 240, h = 36},
+  apply   = {x = OX + 12,  y = BTNS_Y, w = 330, h = 70},
+  restore = {x = OX + 350, y = BTNS_Y, w = 278, h = 70},
 }
 
 -- ─── Estado ────────────────────────────────────────────────────────────────
@@ -338,7 +337,7 @@ local function draw_top()
   -- Hint de navegação
   love.graphics.setFont(f_small)
   col(C.dim, 0.40)
-  love.graphics.printf("D-pad ↑↓ navegar   A aplicar   Y restaurar", 0, 463, 640, "center")
+  love.graphics.printf("D-pad ↑↓ navegar   A aplicar", 0, 463, 640, "center")
 end
 
 -- ─── Tela inferior ─────────────────────────────────────────────────────────
@@ -433,12 +432,10 @@ local function draw_bottom()
   love.graphics.setColor(1, 1, 1, can_rest and 1 or 0.35)
   love.graphics.printf("Restaurar\nBackup", BTN.restore.x, BTN.restore.y + 16, BTN.restore.w, "center")
 
-  -- Botão Sair
-  col(C.grey)
-  rrect(BTN.exit.x, BTN.exit.y, BTN.exit.w, BTN.exit.h, 8)
+  -- Hint de saída
   love.graphics.setFont(f_small)
-  col({1, 1, 1}, 0.60)
-  love.graphics.printf("Sair", BTN.exit.x, BTN.exit.y + 10, BTN.exit.w, "center")
+  col(C.dim, 0.45)
+  love.graphics.printf("START ou SELECT para sair", OX, BTNS_Y + 82, 640, "center")
 
   -- Overlay de applying
   if state == "applying" then
@@ -483,9 +480,8 @@ local function handle_press(x, y)
       end
       return
     end
-    if hit(BTN.apply, x, y)                        then do_apply();        return end
-    if hit(BTN.restore, x, y) and backup_exists    then do_restore();       return end
-    if hit(BTN.exit, x, y)                         then love.event.quit(); return end
+    if hit(BTN.apply, x, y)                     then do_apply();  return end
+    if hit(BTN.restore, x, y) and backup_exists then do_restore(); return end
   end
 end
 
@@ -497,11 +493,10 @@ function love.gamepadpressed(_, button)
   if state == "done"    then done_timer = AUTO_CLOSE; return end
   if state ~= "menu"    then return end
 
-  if     button == "dpup"              then move_cursor(-1)
-  elseif button == "dpdown"            then move_cursor(1)
-  elseif button == "a"                 then do_apply()
-  elseif button == "y"                 then do_restore()
-  elseif button == "back" or button == "b" then love.event.quit()
+  if     button == "dpup"   then move_cursor(-1)
+  elseif button == "dpdown" then move_cursor(1)
+  elseif button == "b"      then do_apply()    -- físico A
+  elseif button == "start" or button == "back" then love.event.quit()
   end
 end
 
