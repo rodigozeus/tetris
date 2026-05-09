@@ -384,6 +384,79 @@ O servidor de atualização automática (`update.rocknix.org`) **não lista as n
 
 ---
 
+## Acesso SSH Programático (Python + Paramiko)
+
+O SSH interativo com senha não funciona bem em automações (sem `sshpass` no Windows). A alternativa é usar **paramiko** para executar comandos e transferir arquivos diretamente do PC.
+
+### Instalação
+
+```bash
+pip install paramiko
+```
+
+### Padrão de uso
+
+Criar um script temporário `_cmd.py` na raiz do projeto e rodar com o Python do Anaconda:
+
+```python
+import paramiko
+
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect('<IP_DO_CONSOLE>', username='root', password='rocknix', timeout=10)
+
+# Executar comando
+_, stdout, stderr = ssh.exec_command('comando aqui', timeout=30)
+print(stdout.read().decode())
+
+# Transferir arquivo (SFTP)
+sftp = ssh.open_sftp()
+sftp.put('arquivo_local.sh', '/storage/roms/ports/arquivo_local.sh')
+sftp.close()
+
+ssh.close()
+```
+
+Rodar via PowerShell:
+```powershell
+& "C:\Users\rodig\anaconda3\python.exe" _cmd.py
+```
+
+### Transferência de arquivos grandes
+
+Para arquivos grandes (ex: imagem `.img.gz`) com barra de progresso:
+
+```python
+import paramiko, os, time
+
+def progress(sent, total):
+    pct = sent / total * 100
+    speed = sent / (time.time() - start) / 1024 / 1024
+    print(f'\r{pct:.1f}%  {sent//1024//1024}/{total//1024//1024} MB  {speed:.1f} MB/s', end='')
+
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect('<IP>', username='root', password='rocknix', timeout=10)
+start = time.time()
+sftp = ssh.open_sftp()
+sftp.put('releases/ROCKNIX-RK3566.aarch64-20260409-Specific.img.gz',
+         '/storage/ROCKNIX-RK3566.aarch64-20260409-Specific.img.gz',
+         callback=progress)
+sftp.close()
+ssh.close()
+```
+
+### Notas
+
+- `exec_command` com timeout curto pode dar `TimeoutError` em comandos longos — use timeout adequado ou rode com `&` em background e monitore separadamente
+- Para comandos que demoram (ex: `dd`), rodar em background e checar `/proc/diskstats` ou um arquivo de log para monitorar progresso
+- O `dd` do BusyBox não suporta `status=progress` — usar `/proc/diskstats` para estimar bytes escritos:
+  ```bash
+  grep 'mmcblk0 ' /proc/diskstats | awk '{print $10 * 512 / 1024 / 1024 " MB escritos"}'
+  ```
+
+---
+
 ## Notas
 
 - O console fica acessível via SSH enquanto estiver na mesma rede Wi-Fi
