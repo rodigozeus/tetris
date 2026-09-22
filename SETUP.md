@@ -292,7 +292,9 @@ swaymsg 'output DSI-1 power off'
 
 **Causa:** quando a janela floating do jogo (que ocupa os dois outputs, `DSI-2`+`DSI-1`) fecha, o Sway às vezes não devolve o foco pro EmulationStation de forma confiável — o foco fica preso no workspace vazio da tela de baixo, ou a própria janela do ES é reparentada pro workspace errado. É uma corrida assíncrona entre o Sway processando o fechamento e qualquer tentativa de restaurar foco manualmente (`swaymsg focus`, `swaymsg move to workspace`) — tentamos várias combinações (trap, sleep, retries) e nenhuma foi 100% confiável.
 
-**O que resolve de verdade:** reiniciar o serviço systemd do EmulationStation, não remendar o estado do Sway na mão:
+> ⚠️ **Reaberto em 2026-09-22 à noite:** depois de uma atualização do PortMaster + reinstalação do port `moonlightnew`, o `systemctl restart essway.service` **parou de resolver de forma confiável** — mesmo com o Sway reportando estado correto (ES focado, DSI-1 desligado) e os eventos crus do controle chegando normalmente no kernel (confirmado via `dd if=/dev/input/event7`), o ES simplesmente não reage mais a botão depois de fechar o Gustavo. Nem reboot completo resolveu de primeira. Não investigado até o fim — ficou pra próxima sessão. Hipótese não confirmada: dessincronia entre o estado do Sway e o estado interno do SDL do ES (o `focused: true` do Sway não implica necessariamente que o SDL "sabe" disso).
+
+**O que resolvia antes (parcialmente confiável até a atualização do PortMaster):** reiniciar o serviço systemd do EmulationStation, não remendar o estado do Sway na mão:
 ```bash
 systemctl restart essway.service
 ```
