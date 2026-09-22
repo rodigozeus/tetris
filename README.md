@@ -147,7 +147,8 @@ LD_LIBRARY_PATH=/storage/roms/ports/moonlightnew/libs \
   /storage/roms/ports/moonlightnew/love \
   /storage/roms/ports/snake
 
-# Jogo dual screen
+# Jogo dual screen — ver Update.sh pro padrão completo (com o "vigia"
+# que reinicia o essway.service ao fechar; detalhes em SETUP.md)
 swaymsg 'output DSI-1 power on'
 SDL_VIDEODRIVER=wayland \
 LD_LIBRARY_PATH=/storage/roms/ports/moonlightnew/libs \
@@ -157,7 +158,6 @@ LOVE_PID=$!
 sleep 1
 swaymsg '[title="Update"] floating enable, border none, move absolute position 0 0'
 wait $LOVE_PID
-swaymsg 'output DSI-1 power off'
 ```
 
 Para enviar um jogo atualizado ao console:
@@ -166,7 +166,7 @@ Para enviar um jogo atualizado ao console:
 scp main.lua root@<IP_DO_CONSOLE>:/storage/roms/ports/snake/main.lua
 ```
 
-Senha SSH padrão do Rocknix: `rocknix`
+Acesso por chave SSH (sem senha) — ver [Acesso SSH](SETUP.md#acesso-ssh) no SETUP.md.
 
 ---
 

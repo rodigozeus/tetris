@@ -15,38 +15,65 @@ Desenvolvemos jogos em **Love2D (Lua)** para rodar em um **Anbernic RG DS** com 
 | Resolução | 640x480 |
 | Conexão | SSH / SCP via rede local |
 | Usuário SSH | `root` |
-| Senha SSH | `rocknix` |
+| IP | `192.168.68.111` (reservado no roteador, fixo) |
+
+### Acesso SSH
+
+Desde 2026-09-22 o acesso é **por chave**, não por senha — mais rápido e não depende de lembrar/adivinhar credencial:
+
+| Chave | De onde | Uso |
+|-------|---------|-----|
+| `~/.ssh/id_ed25519` (`rodig@windows`) | Este PC | Acesso direto do PC de desenvolvimento |
+| `~/.ssh/rgds_console` (no damaceno) | Servidor `damaceno` | Backup automático (cron), ver [backup_rgds.md](backup_rgds.md) |
+
+Ambas já estão em `/root/.ssh/authorized_keys` no console. `ssh root@192.168.68.111` direto, sem senha.
+
+> A senha `rocknix` documentada em versões antigas deste arquivo **não bateu** quando testada em 2026-09-22 (nem `rocknix` nem `root`/`root` funcionaram) — pode ter mudado numa reinstalação, ou nunca ter sido essa. Não gastar tempo tentando adivinhar: usar a chave SSH acima, ou pedir pra rodar o comando de `authorized_keys` (ver [backup_rgds.md](backup_rgds.md)) se for um console/chave novos.
 
 ---
 
 ## Armazenamento
 
-O Rocknix está instalado na **eMMC interna** (~29GB). O SD card é dedicado exclusivamente a ROMs e saves, formatado em **FAT32** para acesso direto pelo Windows.
+Desde a migração de 2026-09-22 ([instala_emmc.md](instala_emmc.md)), o Rocknix roda **inteiramente da eMMC interna** (~29GB) — sistema e dados, sem depender do cartão SD pra funcionar:
 
-| Dispositivo | Conteúdo | Filesystem |
-|-------------|----------|------------|
-| eMMC (`/dev/mmcblk0`) | Sistema Rocknix | ext4 |
-| SD card (`/dev/mmcblk1`) | ROMs, saves, configs | FAT32 |
+| Partição eMMC | Conteúdo | Filesystem |
+|---------------|----------|------------|
+| `ROCKNIX` (`/dev/mmcblk0p1`, ~2GB) | kernel, SYSTEM, device trees, extlinux | FAT32 |
+| `STORAGE` (`/dev/mmcblk0p2`, ~27GB) | ROMs, saves, configs, ports — tudo que fica em `/storage/` | ext4 |
 
-O Rocknix auto-monta o SD card em `/storage/` na inicialização. Estrutura esperada na raiz do SD:
+O cartão SD **não é necessário** pro uso normal — só serve como mídia de boot alternativa em caso de emergência (ver [instala_emmc.md](instala_emmc.md)). Estrutura em `/storage/`:
 
 ```
-SD:/
+/storage/
 ├── roms/
 │   ├── nds/      ← ROMs de NDS
 │   └── snes/     ← ROMs de SNES
-└── saves/        ← Saves flat (sem subpastas), ex: "Mario Kart DS.dsv"
+├── ports/        ← Jogos Love2D (este repo) + PortMaster
+└── .config/      ← Configs (retroarch, drastic, emulationstation...)
 ```
 
-Para adicionar ROMs: conectar o SD no PC e copiar para a pasta do sistema correspondente. Para adicionar saves: copiar os arquivos `.dsv` / `.sav` / `.srm` diretamente para `saves/`.
+Para adicionar ROMs ou saves: `scp` direto pro caminho correspondente em `/storage/` (ver [Onde estão os ROMs](#onde-estão-os-roms) abaixo). Backup automático desse `/storage` inteiro a cada 15min — ver [backup_rgds.md](backup_rgds.md).
 
-Ver [instala_emmc.md](instala_emmc.md) para detalhes da instalação na eMMC.
+---
+
+## Onde estão os ROMs
+
+Duas pastas parecidas, propósitos diferentes — fácil de confundir:
+
+| Pasta | O que é | Tamanho |
+|-------|---------|---------|
+| `games/roms/` (neste repo, gitignored) | Subconjunto do que já foi levado pro console + mídia de scraper (capas, manuais, vídeos) pro EmulationStation. **Não é a fonte pra achar ROM nova.** | 27 `.nds` |
+| `C:\Users\rodig\OneDrive\Roms - Retrô\` | Biblioteca completa, organizada por sistema/idioma (ex: `Nintendo DS\PT-BR\`). **É aqui que se procura uma ROM que ainda não está no console.** | 290 `.nds` só de NDS |
+
+Exemplo real (2026-09-22): a ROM patched do Zelda PH (`Zelda_PH_PTBR_Dpad_Final.nds`, ver [Zelda_PH.md](Zelda_PH.md)) não estava em nenhum dos dois lugares "óbvios" do console nem do `games/roms/` — estava em `Roms - Retrô\Nintendo DS\PT-BR\`. Procurar lá primeiro quando uma ROM "sumir" depois de uma reinstalação.
 
 ---
 
 ## Love2D no Console
 
-O binário do Love2D **já está instalado** no console, instalado como dependência do port "moonlightnew":
+> ⚠️ O Love2D **não sobrevive a uma reinstalação do Rocknix** (reinstala/clona a eMMC do zero, restaura Android, etc.) — ele é uma dependência do port "moonlightnew" do PortMaster, não faz parte do sistema base. Depois de qualquer reinstalação, conferir se existe antes de tentar rodar os jogos deste repo (ver [checklist abaixo](#checklist-pós-reinstalação-de-osemmc)).
+
+O binário do Love2D, quando instalado, fica como dependência do port "moonlightnew":
 
 | Arquivo | Caminho |
 |---------|---------|
@@ -422,9 +449,22 @@ O servidor de atualização automática (`update.rocknix.org`) **não lista as n
 
 ---
 
-## Acesso SSH Programático (Python + Paramiko)
+## Acesso SSH Programático
 
-O SSH interativo com senha não funciona bem em automações (sem `sshpass` no Windows). A alternativa é usar **paramiko** para executar comandos e transferir arquivos diretamente do PC.
+### Via chave (preferido desde 2026-09-22)
+
+Com a chave SSH já instalada no console (ver [Acesso SSH](#acesso-ssh) acima), `ssh`/`scp` direto do Git Bash funcionam sem senha nem paramiko:
+
+```bash
+ssh root@192.168.68.111 "comando aqui"
+scp arquivo_local.sh root@192.168.68.111:/storage/roms/ports/arquivo_local.sh
+```
+
+Isso resolve o problema original que motivou o paramiko (SSH interativo com senha não funciona bem em automações, sem `sshpass` no Windows) — sem depender de senha, o Git Bash já basta.
+
+### Via Python + Paramiko (alternativa, se precisar de senha)
+
+Útil se algum dia o acesso por chave não estiver disponível (console novo, chave não copiada ainda) e for preciso usar senha em vez disso.
 
 ### Instalação
 
@@ -492,6 +532,23 @@ ssh.close()
   ```bash
   grep 'mmcblk0 ' /proc/diskstats | awk '{print $10 * 512 / 1024 / 1024 " MB escritos"}'
   ```
+
+---
+
+## Checklist pós-reinstalação de OS/eMMC
+
+Toda vez que o Rocknix é reinstalado, clonado ou a eMMC é trocada (ver [instala_emmc.md](instala_emmc.md)), o que volta "de graça" (estava no `/storage` clonado) e o que **não** volta:
+
+| Item | Volta sozinho? | Como verificar / recriar |
+|------|-----------------|---------------------------|
+| Configs, saves, ROMs já existentes | ✅ se clonado do `/storage` de uma instalação anterior | — |
+| **Love2D (runtime "moonlightnew")** | ❌ nunca | `ls /storage/roms/ports/moonlightnew/love` — se faltar, instalar com `harbourmaster install moonlightnew.zip` (PortMaster) |
+| **Jogos deste repo** (Snake, Tetris, Lê Comigo, Lê e Vence, Zelda PH Saves, Update, TouchTest) | ✅ se estavam no `/storage` clonado, ❌ se a instalação é "do zero" | `ls /storage/roms/ports/*.sh` — se faltar, resubir (ver seção "Como Rodar no Console" no [README.md](README.md)) |
+| **ROM do Zelda PH** (`Zelda_PH_PTBR_Dpad_Final.nds`) | Igual acima | `ls /storage/roms/nds/Zelda_PH_PTBR_Dpad_Final.nds` — se faltar, está em `Roms - Retrô\Nintendo DS\PT-BR\` (ver [Onde estão os ROMs](#onde-estão-os-roms)) |
+| **Backup automático** (cron no damaceno) | ✅ — não depende do console, só do IP dele | Confirmar que o IP do console não mudou (`192.168.68.111`, reservado no roteador); ver [backup_rgds.md](backup_rgds.md) |
+| Chaves SSH (`authorized_keys`) | ✅ se clonado do `/storage`, ❌ se `/root/.ssh` não é persistido em `/storage` nesse Rocknix | `cat ~/.ssh/authorized_keys` no console — se vazio, seguir [Acesso SSH](#acesso-ssh) |
+
+> Regra prática: **`/storage` é o que sobrevive** a uma reinstalação (se for clonado, como em [instala_emmc.md](instala_emmc.md)); qualquer coisa que vive **fora** de `/storage` (binários de sistema, runtime do Love2D, `/root/.ssh` dependendo da versão) precisa ser reconferida.
 
 ---
 
