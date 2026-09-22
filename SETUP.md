@@ -71,6 +71,8 @@ Exemplo real (2026-09-22): a ROM patched do Zelda PH (`Zelda_PH_PTBR_Dpad_Final.
 
 ## Love2D no Console
 
+> ⚠️ O port `moonlightnew` empacota **dois binários diferentes**: `love` (o que usamos pros nossos jogos, sempre funcionou) e `moonlight` (cliente de streaming de jogos via Sunshine/GameStream — **não usado por nenhum jogo deste repo**). O `moonlight` está quebrado nesse device: falta `libvdpau.so.1` no sistema (não existe em lugar nenhum, nem em `/usr/lib/compat`) e não há compilador/gerenciador de pacotes no console pra resolver na hora. Não afeta os jogos — só o streaming, que ninguém aqui usa hoje. Se um dia for atrás disso, começar comparando com uma instalação de referência do PortMaster que tenha o streaming funcionando, pra achar de onde tirar um `libvdpau.so.1` compatível com aarch64.
+
 > ⚠️ O Love2D **não sobrevive a uma reinstalação do Rocknix** (reinstala/clona a eMMC do zero, restaura Android, etc.) — ele é uma dependência do port "moonlightnew" do PortMaster, não faz parte do sistema base. Depois de qualquer reinstalação, conferir se existe antes de tentar rodar os jogos deste repo (ver [checklist abaixo](#checklist-pós-reinstalação-de-osemmc)).
 
 O binário do Love2D, quando instalado, fica como dependência do port "moonlightnew":
@@ -292,9 +294,9 @@ swaymsg 'output DSI-1 power off'
 
 **Causa:** quando a janela floating do jogo (que ocupa os dois outputs, `DSI-2`+`DSI-1`) fecha, o Sway às vezes não devolve o foco pro EmulationStation de forma confiável — o foco fica preso no workspace vazio da tela de baixo, ou a própria janela do ES é reparentada pro workspace errado. É uma corrida assíncrona entre o Sway processando o fechamento e qualquer tentativa de restaurar foco manualmente (`swaymsg focus`, `swaymsg move to workspace`) — tentamos várias combinações (trap, sleep, retries) e nenhuma foi 100% confiável.
 
-> ⚠️ **Reaberto em 2026-09-22 à noite:** depois de uma atualização do PortMaster + reinstalação do port `moonlightnew`, o `systemctl restart essway.service` **parou de resolver de forma confiável** — mesmo com o Sway reportando estado correto (ES focado, DSI-1 desligado) e os eventos crus do controle chegando normalmente no kernel (confirmado via `dd if=/dev/input/event7`), o ES simplesmente não reage mais a botão depois de fechar o Gustavo. Nem reboot completo resolveu de primeira. Não investigado até o fim — ficou pra próxima sessão. Hipótese não confirmada: dessincronia entre o estado do Sway e o estado interno do SDL do ES (o `focused: true` do Sway não implica necessariamente que o SDL "sabe" disso).
+> ⚠️ **Falso alarme em 2026-09-22 à noite, causa real identificada:** o `systemctl restart essway.service` pareceu parar de funcionar depois de mexer no PortMaster — mas a causa real era que, tentando fazer o cliente de streaming Moonlight (binário `moonlight`, separado do `love` que usamos) funcionar (faltava `libvdpau.so.1`, ver nota abaixo), o pacote `moonlightnew` ficou num estado bagunçado. Reinstalar `moonlightnew` do zero (`rm -rf` a pasta + `harbourmaster install moonlightnew.zip`) resolveu — não era o Sway nem o `essway.service`, era o próprio pacote corrompido pela tentativa manual de conserto.
 
-**O que resolvia antes (parcialmente confiável até a atualização do PortMaster):** reiniciar o serviço systemd do EmulationStation, não remendar o estado do Sway na mão:
+**O que resolve:** reiniciar o serviço systemd do EmulationStation, não remendar o estado do Sway na mão:
 ```bash
 systemctl restart essway.service
 ```
