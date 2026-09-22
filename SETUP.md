@@ -292,19 +292,33 @@ swaymsg 'output DSI-1 power off'
 
 **Sintoma:** o jogo abre e roda normal. Ao fechar (`love.event.quit()`, ex. botão Select/Back), a tela de baixo desliga, a tela de cima mostra o EmulationStation (ou fica preta) — mas os botões **não respondem mais**. Às vezes reaparece depois de alguns segundos, às vezes nunca.
 
-**Causa:** quando a janela floating do jogo (que ocupa os dois outputs, `DSI-2`+`DSI-1`) fecha, o Sway às vezes não devolve o foco pro EmulationStation de forma confiável — o foco fica preso no workspace vazio da tela de baixo, ou a própria janela do ES é reparentada pro workspace errado. É uma corrida assíncrona entre o Sway processando o fechamento e qualquer tentativa de restaurar foco manualmente (`swaymsg focus`, `swaymsg move to workspace`) — tentamos várias combinações (trap, sleep, retries) e nenhuma foi 100% confiável.
+**Causa raiz (confirmada em 2026-09-22):** o RG DS tem **dois seats no Sway** — `seat0` e `seat1` — e o `retrogame_joypad` está anexado **nos dois**. Quando a janela do jogo (floating, cobrindo `DSI-2`+`DSI-1`) fecha, o `seat1` fica com o foco preso no **workspace vazio da DSI-1**, enquanto o `seat0` volta corretamente pro EmulationStation:
 
-> ⚠️ **Falso alarme em 2026-09-22 à noite, causa real identificada:** o `systemctl restart essway.service` pareceu parar de funcionar depois de mexer no PortMaster — mas a causa real era que, tentando fazer o cliente de streaming Moonlight (binário `moonlight`, separado do `love` que usamos) funcionar (faltava `libvdpau.so.1`, ver nota abaixo), o pacote `moonlightnew` ficou num estado bagunçado. Reinstalar `moonlightnew` do zero (`rm -rf` a pasta + `harbourmaster install moonlightnew.zip`) resolveu — não era o Sway nem o `essway.service`, era o próprio pacote corrompido pela tentativa manual de conserto.
-
-**O que resolve:** reiniciar o serviço systemd do EmulationStation, não remendar o estado do Sway na mão:
-```bash
-systemctl restart essway.service
 ```
-Isso reresseta o ES (SDL, foco de input, tudo) do zero em ~2s — visivelmente mais devagar que um "volta e já era", mas **confiável** em todos os testes, ao contrário das tentativas de restaurar foco manualmente.
+seat0: focus=23  → EmulationStation   ✅
+seat1: focus=6   → workspace "2" vazio ❌  ← input do joypad morre aqui
+```
 
-**Padrão usado em todo script dual screen** (`Gustavo.sh`, `Update.sh`, `Zelda_PH_Saves.sh`): um "vigia" desacoplado via `setsid` que espera o `love` terminar e então reinicia o serviço — sobrevive mesmo se o script principal for morto junto com o jogo:
+Diagnosticar isso com `swaymsg -t get_seats` (o `focus` de cada seat é o id do nó focado; cruzar com `swaymsg -t get_tree`).
+
+**Por que as tentativas "óbvias" falharam:** comandos via IPC (`swaymsg '[title="EmulationStation"] focus'`, `workspace 1`, `move to workspace`) rodam **sempre no seat0** — não existe como direcionar `focus` pro seat1 pelo `swaymsg`. Por isso o `get_tree` mostrava "EmulationStation focused: true" e mesmo assim o controle não respondia: o seat0 estava certo, o seat1 é que estava morto. Também não adianta `seat seat1 fallback yes` (testado, não move o foco).
+
+**O que resolve:** **desabilitar** o output DSI-1 (não apenas `power off`). Isso destrói o workspace fantasma, e o `seat1` é obrigado a se realocar na única janela que sobrou — o EmulationStation:
+
+```bash
+swaymsg 'output DSI-1 disable'      # destrói o workspace 2 → libera o seat1
+swaymsg 'output DSI-1 enable'       # devolve o output pro layout (volta em x=640)
+swaymsg 'output DSI-1 power off'    # estado normal de repouso
+```
+
+Verificado: depois do `disable`, `get_seats` mostra os **dois** seats em `focus=23` (ES), e o `enable` restaura a geometria correta (`DSI-1 x=640 640x480`).
+
+> Tentativas anteriores que **não** resolvem de forma confiável, documentadas pra não repetir: `trap`/`sleep`/retries no fim do script, `swaymsg focus` e `move to workspace` em loop, e `systemctl restart essway.service`. O restart do serviço *parecia* funcionar (resetava o Sway inteiro junto), mas custava ~2s de recarga da lista a cada saída de jogo e mascarava a causa real.
+
+**Padrão usado em todo script dual screen** (`Gustavo.sh`, `Update.sh`, `Zelda_PH_Saves.sh`, `TouchTest.sh`): um "vigia" desacoplado via `setsid` que espera o `love` terminar e então faz o ciclo disable/enable — sobrevive mesmo se o script principal for morto junto com o jogo:
 ```bash
 #!/bin/bash
+swaymsg 'output DSI-1 enable' 2>/dev/null
 swaymsg 'output DSI-1 power on' 2>/dev/null
 
 SDL_VIDEODRIVER=wayland \
@@ -318,15 +332,18 @@ swaymsg '[title="Título do Jogo"] floating enable, border none, move absolute p
 
 setsid bash -c "
   while kill -0 $LOVE_PID 2>/dev/null; do sleep 0.2; done
+  swaymsg 'output DSI-1 disable' 2>/dev/null
+  swaymsg 'output DSI-1 enable' 2>/dev/null
   swaymsg 'output DSI-1 power off' 2>/dev/null
-  systemctl restart essway.service 2>/dev/null
 " < /dev/null > /dev/null 2>&1 &
 disown
 
 wait $LOVE_PID
 ```
 
-> `essway.service` é o unit systemd que roda `start_es.sh` (EmulationStation) com `Restart=always` — confirmar com `systemctl cat essway.service`.
+> **Pista que levou ao diagnóstico:** o script oficial `/usr/bin/portmaster_sway_fullscreen.sh` do Rocknix mexe explicitamente em `swaymsg 'seat seat1 fallback yes'` quando `DEVICE_HAS_DUAL_SCREEN=true`. Foi o que revelou que existe multi-seat aqui — nada na documentação do Rocknix ou do PortMaster menciona isso.
+
+> **Para destravar na mão** (se acontecer com algum script ainda não corrigido): `swaymsg 'output DSI-1 disable'` e depois `enable` + `power off`. Lembrar de exportar `SWAYSOCK=/var/run/0-runtime-dir/sway-ipc.0.sock` quando rodar via SSH, senão o `swaymsg` não acha o socket.
 
 > **STARTUP_DELAY:** mesmo com o swaymsg, a janela já renderiza deslocada durante o primeiro segundo. A solução é fazer o `love.draw()` pintar tela preta enquanto o timer não expirar, evitando o flash deslocado. Um delay de **0,3 s** já é suficiente e não prejudica a experiência:
 > ```lua
