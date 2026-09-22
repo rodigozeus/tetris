@@ -1,5 +1,5 @@
 #!/bin/bash
-swaymsg 'output DSI-1 power on'
+swaymsg 'output DSI-1 power on' 2>/dev/null
 
 SDL_VIDEODRIVER=wayland \
 LD_LIBRARY_PATH=/storage/roms/ports/moonlightnew/libs \
@@ -7,10 +7,17 @@ LD_LIBRARY_PATH=/storage/roms/ports/moonlightnew/libs \
   /storage/roms/ports/touchtest &
 
 LOVE_PID=$!
-
-# Aguarda a janela abrir e a posiciona em (0,0) para cobrir os dois outputs
 sleep 1
-swaymsg '[title="Touch Test"] floating enable, border none, move absolute position 0 0'
+swaymsg '[title="Touch Test"] floating enable, border none, move absolute position 0 0' 2>/dev/null
+
+# Vigia desacoplado (setsid = grupo de processo próprio): sobrevive mesmo se
+# este script e o love forem mortos juntos. Reiniciar o essway.service é a
+# forma confiável de voltar pro EmulationStation limpo — ver SETUP.md.
+setsid bash -c "
+  while kill -0 $LOVE_PID 2>/dev/null; do sleep 0.2; done
+  swaymsg 'output DSI-1 power off' 2>/dev/null
+  systemctl restart essway.service 2>/dev/null
+" < /dev/null > /dev/null 2>&1 &
+disown
 
 wait $LOVE_PID
-swaymsg 'output DSI-1 power off'

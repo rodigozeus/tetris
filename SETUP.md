@@ -259,6 +259,44 @@ swaymsg 'output DSI-1 power off'
 
 > O `sleep 1` + `swaymsg` é necessário porque o Sway centraliza janelas floating no output ativo (DSI-2), deslocando a janela de 1280px em -320px. O swaymsg força a posição (0,0) depois que a janela abre.
 
+### ⚠️ Bug: input trava depois de fechar um jogo dual screen
+
+**Sintoma:** o jogo abre e roda normal. Ao fechar (`love.event.quit()`, ex. botão Select/Back), a tela de baixo desliga, a tela de cima mostra o EmulationStation (ou fica preta) — mas os botões **não respondem mais**. Às vezes reaparece depois de alguns segundos, às vezes nunca.
+
+**Causa:** quando a janela floating do jogo (que ocupa os dois outputs, `DSI-2`+`DSI-1`) fecha, o Sway às vezes não devolve o foco pro EmulationStation de forma confiável — o foco fica preso no workspace vazio da tela de baixo, ou a própria janela do ES é reparentada pro workspace errado. É uma corrida assíncrona entre o Sway processando o fechamento e qualquer tentativa de restaurar foco manualmente (`swaymsg focus`, `swaymsg move to workspace`) — tentamos várias combinações (trap, sleep, retries) e nenhuma foi 100% confiável.
+
+**O que resolve de verdade:** reiniciar o serviço systemd do EmulationStation, não remendar o estado do Sway na mão:
+```bash
+systemctl restart essway.service
+```
+Isso reresseta o ES (SDL, foco de input, tudo) do zero em ~2s — visivelmente mais devagar que um "volta e já era", mas **confiável** em todos os testes, ao contrário das tentativas de restaurar foco manualmente.
+
+**Padrão usado em todo script dual screen** (`Gustavo.sh`, `Update.sh`, `Zelda_PH_Saves.sh`): um "vigia" desacoplado via `setsid` que espera o `love` terminar e então reinicia o serviço — sobrevive mesmo se o script principal for morto junto com o jogo:
+```bash
+#!/bin/bash
+swaymsg 'output DSI-1 power on' 2>/dev/null
+
+SDL_VIDEODRIVER=wayland \
+LD_LIBRARY_PATH=/storage/roms/ports/moonlightnew/libs \
+  /storage/roms/ports/moonlightnew/love \
+  /storage/roms/ports/meujogo &
+
+LOVE_PID=$!
+sleep 1
+swaymsg '[title="Título do Jogo"] floating enable, border none, move absolute position 0 0' 2>/dev/null
+
+setsid bash -c "
+  while kill -0 $LOVE_PID 2>/dev/null; do sleep 0.2; done
+  swaymsg 'output DSI-1 power off' 2>/dev/null
+  systemctl restart essway.service 2>/dev/null
+" < /dev/null > /dev/null 2>&1 &
+disown
+
+wait $LOVE_PID
+```
+
+> `essway.service` é o unit systemd que roda `start_es.sh` (EmulationStation) com `Restart=always` — confirmar com `systemctl cat essway.service`.
+
 > **STARTUP_DELAY:** mesmo com o swaymsg, a janela já renderiza deslocada durante o primeiro segundo. A solução é fazer o `love.draw()` pintar tela preta enquanto o timer não expirar, evitando o flash deslocado. Um delay de **0,3 s** já é suficiente e não prejudica a experiência:
 > ```lua
 > local startup_timer = 0
